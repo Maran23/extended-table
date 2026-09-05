@@ -1,0 +1,13 @@
+{
+  "resources": [
+    { "glob": "tools/maran/extendedtable/filter/popup/filter-popup.bss" },
+    { "glob": "tools/maran/extendedtable/filter/popup/filter-popup.css" },
+    { "glob": "tools/maran/extendedtable/tableview/extended-table-view.bss" },
+    { "glob": "tools/maran/extendedtable/tableview/extended-table-view.css" },
+    { "glob": "tools/maran/extendedtable/treetableview/extended-tree-table-view.bss" },
+    { "glob": "tools/maran/extendedtable/treetableview/extended-tree-table-view.css" }
+  ],
+  "bundles": [
+    { "name": "tools.maran.extendedtable.table.common.messages" }
+  ]
+}

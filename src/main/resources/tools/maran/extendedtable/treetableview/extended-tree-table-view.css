@@ -1,0 +1,92 @@
+/* Fixed table cells: Should have a background as otherwise we can see through. */
+
+.fixed-tree-table-cell {
+   -fx-background: -fx-control-inner-background;
+   -fx-background-color: -fx-background;
+}
+
+/* Fixed tree table cell selected but not focused (anymore) */
+.tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .fixed-tree-table-cell,
+.tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .fixed-tree-table-cell:selected {
+    -fx-background: -fx-selection-bar-non-focused;
+    -fx-table-cell-border-color: derive(-fx-selection-bar-non-focused, 20%);
+}
+
+/** Fixed tree table cell selected **/
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .fixed-tree-table-cell,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .fixed-tree-table-cell:selected {
+    -fx-background: -fx-selection-bar;
+    -fx-table-cell-border-color: derive(-fx-selection-bar, 20%);
+}
+
+/* Fixed tree table cell focused in row selection mode */
+.tree-table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused > .fixed-tree-table-cell {
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+    -fx-background-insets: 0, 1 0 1 0, 2 1 2 0;
+}
+
+/* Fixed tree table cell focused in cell selection mode */
+.tree-table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .fixed-tree-table-cell:focused {
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+    -fx-background-insets: 0, 1, 2;
+}
+
+/* Improvements to the default style */
+
+.tree-table-cell > .combo-box {
+    -fx-padding: -0.083333em 0 -0.25em 0;
+    -fx-min-width: 0;
+    -fx-max-width: infinity;
+}
+
+/* One padding less on the top and two less on the bottom gives a height of ~23. */
+.tree-table-cell > .text-field {
+    -fx-padding: 0.25em 0.583333em 0.083333em 0.583333em;
+}
+
+.tree-table-cell > .text-area {
+    -fx-min-height: 0;
+}
+
+/* Header */
+
+.tree-table-view > .header {
+    -fx-spacing: 0.166667em;
+    -fx-padding: 0.166667em;
+}
+
+.tree-table-view > .header > .button-box {
+    -fx-spacing: 0.166667em;
+}
+
+.tree-table-view > .header > .label {
+    -fx-font-weight: bold;
+}
+
+/* Top border for columns in case of shown header */
+.tree-table-view:show-header .column-header {
+    -fx-background-insets: 0, 1 1 1 0, 2 2 2 1;
+}
+
+/* Filler in case of shown header */
+.tree-table-view:show-header .filler {
+    -fx-background-insets: 0, 1 0 1 0, 2 1 2 1;
+}
+
+/* Validation */
+.tree-table-cell:invalid {
+    -fx-background-insets: 1, 2;
+    -fx-background-color: #FF3838, -fx-background;
+}
+
+/* Funnel */
+.funnel {
+    -fx-background-color: -fx-selection-bar;
+    -fx-padding: 0.5em;
+    -fx-shape: "M 0 0 L 100 0 L 70 100 L 70 200 L 30 180 L 30 100 Z";
+}
+
+/* Tree line */
+.tree-line-drawer {
+    -fx-stroke: -fx-text-fill;
+}
