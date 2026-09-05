@@ -1,0 +1,14 @@
+/* Filter popup */
+.filter-popup > .filter-box {
+    -fx-spacing: 0.333333em;
+    -fx-padding: 0.333333em;
+    /* Copied from combo-box popup. */
+    -fx-background-color:
+        linear-gradient(to bottom,
+            derive(-fx-color,-17%),
+            derive(-fx-color,-30%)
+        ),
+        -fx-control-inner-background;
+    -fx-background-insets: -1 -1 -1 -1, 0 0 0 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0.0, 0, 8);
+}

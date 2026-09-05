@@ -1,0 +1,92 @@
+/* Fixed table cells: Should have a background as otherwise we can see through. */
+
+.fixed-table-cell {
+   -fx-background: -fx-control-inner-background;
+   -fx-background-color: -fx-table-cell-border-color, -fx-background;
+   -fx-background-insets: 0, 0 0 1 0;
+}
+
+.fixed-table-cell:odd {
+    -fx-background: -fx-control-inner-background-alt;
+}
+
+/* Fixed table cell selected but not focused (anymore) */
+.table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .fixed-table-cell,
+.table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .fixed-table-cell:selected {
+    -fx-background: -fx-selection-bar-non-focused;
+    -fx-table-cell-border-color: derive(-fx-selection-bar-non-focused, 20%);
+}
+
+/** Fixed table cell selected **/
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .fixed-table-cell,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .fixed-table-cell:selected {
+    -fx-background: -fx-selection-bar;
+    -fx-table-cell-border-color: derive(-fx-selection-bar, 20%);
+}
+
+/* Fixed table cell focused in row selection mode */
+.table-view:focused:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused > .fixed-table-cell {
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+    -fx-background-insets: 0, 1 0 1 0, 2 1 2 0;
+}
+
+/* Fixed table cell focused in cell selection mode */
+.table-view:focused:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .fixed-table-cell:focused {
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+    -fx-background-insets: 0, 1, 2;
+}
+
+/* Improvements to the default style */
+
+.table-cell > .combo-box {
+    -fx-padding: -0.083333em 0 -0.25em 0;
+    -fx-min-width: 0;
+    -fx-max-width: infinity;
+}
+
+.table-cell > .text-field {
+    -fx-padding: 0.25em 0.583333em 0.083333em 0.583333em;
+}
+
+.table-cell > .text-area {
+    -fx-min-height: 0;
+}
+
+/* Header */
+
+.table-view > .header {
+    -fx-spacing: 0.166667em;
+    -fx-padding: 0.166667em;
+}
+
+.table-view > .header > .button-box {
+    -fx-spacing: 0.166667em;
+}
+
+.table-view > .header > .label {
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+/* Top border for columns in case of shown header */
+.table-view:show-header .column-header {
+    -fx-background-insets: 0, 1 1 1 0, 2 2 2 1;
+}
+
+/* Filler in case of shown header */
+.table-view:show-header .filler {
+    -fx-background-insets: 0, 1 0 1 0, 2 1 2 1;
+}
+
+/* Validation */
+.table-cell:invalid {
+    -fx-background-insets: 1, 2;
+    -fx-background-color: #FF3838, -fx-background;
+}
+
+/* Funnel */
+.funnel {
+    -fx-background-color: -fx-selection-bar;
+    -fx-padding: 0.5em;
+    -fx-shape: "M 0 0 L 100 0 L 70 100 L 70 200 L 30 180 L 30 100 Z";
+}
