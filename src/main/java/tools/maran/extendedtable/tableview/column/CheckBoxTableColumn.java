@@ -32,7 +32,7 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
     private WeakInvalidationListener weakColumnsChangedListener;
 
     private CheckBox checkBox;
-    private boolean suppressSelectionListener;
+    private boolean isSelectingAll;
 
     private BooleanProperty allSelectableProperty;
 
@@ -53,9 +53,7 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
     public void refreshFilter() {
         super.refreshFilter();
 
-        suppressSelectionListener = true;
         decideCheckBoxState();
-        suppressSelectionListener = false;
     }
 
     @Override
@@ -71,7 +69,7 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
                 bool -> bool == null ? "" : bool ? TableI18N.message("selected") : TableI18N.message("unselected"));
 
         checkBox = new CheckBox();
-        checkBox.selectedProperty().addListener((_, _, newV) -> selectAllItems(newV));
+        checkBox.setOnAction(_ -> selectAllItems(checkBox.isSelected()));
         setGraphic(checkBox);
 
         allSelectableProperty = new SimpleBooleanProperty(true);
@@ -91,9 +89,7 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
     protected void onItemsChanged(ObservableList<S> items) {
         super.onItemsChanged(items);
 
-        suppressSelectionListener = true;
         decideCheckBoxState();
-        suppressSelectionListener = false;
     }
 
     /// Shows or hides the header [CheckBox] depending on whether this column has nested columns.
@@ -107,9 +103,7 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
         } else {
             setGraphic(checkBox);
 
-            suppressSelectionListener = true;
             decideCheckBoxState();
-            suppressSelectionListener = false;
         }
     }
 
@@ -117,9 +111,11 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
     protected void postCommit(S item, Boolean oldValue, Boolean newValue) {
         super.postCommit(item, oldValue, newValue);
 
-        suppressSelectionListener = true;
+        if (isSelectingAll) {
+            return;
+        }
+
         decideCheckBoxState(newValue);
-        suppressSelectionListener = false;
     }
 
     private boolean allItemsSelected() {
@@ -207,23 +203,19 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
     }
 
     private void selectAllItems(boolean newValue) {
-        if (suppressSelectionListener) {
-            return;
-        }
-
+        isSelectingAll = true;
         ObservableList<S> items = getItems();
         for (int index = 0; index < items.size(); index++) {
             Boolean oldValue = readValue(items.get(index));
             // We can not change a null value.
-            if (oldValue == null) {
-                continue;
+            if (oldValue != null) {
+                // Fire an event the same way JavaFX does so that all listeners will be triggered.
+                CellEditEvent<S, Boolean> editEvent = new CellEditEvent<>(getTableView(),
+                        new TablePosition<>(getTableView(), index, this), TableColumn.editCommitEvent(), newValue);
+                Event.fireEvent(this, editEvent);
             }
-
-            // Fire an event the same way JavaFX does so that all listeners will be triggered.
-            CellEditEvent<S, Boolean> editEvent = new CellEditEvent<>(getTableView(),
-                    new TablePosition<>(getTableView(), index, this), TableColumn.editCommitEvent(), newValue);
-            Event.fireEvent(this, editEvent);
         }
+        isSelectingAll = false;
 
         // Since we changed the state of all cells of this column, we need to refresh them.
         ((ExtendedTableView<S>) getTableView()).refreshColumn(this);

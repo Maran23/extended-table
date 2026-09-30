@@ -104,12 +104,11 @@ public class ComboBoxTreeTableCell<S, T> extends ExtendedTreeTableCell<S, T> {
         } else {
             if (comboBox == null) {
                 comboBox = createComboBox();
+                comboBox.disableProperty().bind(Bindings.not(
+                        getTreeTableView().editableProperty().and(getTableColumn().editableProperty())
+                                .and(getTableRow().editableProperty()).and(editableProperty())));
             }
             comboBox.getSelectionModel().select(item);
-
-            comboBox.disableProperty().bind(Bindings.not(
-                    getTreeTableView().editableProperty().and(getTableColumn().editableProperty())
-                            .and(getTableRow().editableProperty()).and(editableProperty())));
 
             setGraphic(comboBox);
         }

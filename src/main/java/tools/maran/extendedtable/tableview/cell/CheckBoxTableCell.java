@@ -54,15 +54,14 @@ public class CheckBoxTableCell<S> extends ExtendedTableCell<S, Boolean> {
 
             if (checkBox == null) {
                 checkBox = createCheckBox();
+                checkBox.disableProperty().bind(Bindings.not(
+                        getTableView().editableProperty().and(getTableColumn().editableProperty())
+                                .and(getTableRow().editableProperty()).and(editableProperty())));
             }
 
             isInUpdate = true;
             checkBox.setSelected(item);
             isInUpdate = false;
-
-            checkBox.disableProperty().bind(Bindings.not(
-                    getTableView().editableProperty().and(getTableColumn().editableProperty())
-                            .and(getTableRow().editableProperty()).and(editableProperty())));
 
             setGraphic(checkBox);
         }

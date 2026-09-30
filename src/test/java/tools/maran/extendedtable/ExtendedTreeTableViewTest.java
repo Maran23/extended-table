@@ -72,17 +72,23 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
             checkBoxColumn.setWriteFunction((row, value) -> row.setFirst(value.toString()));
             table.getColumns().add(checkBoxColumn);
 
+            TreeItem<Row> itemC = new TreeItem<>(new Row("false", "C", null));
+            table.setItems(FXCollections.observableArrayList(List.of(itemA, itemB, itemC)));
+            table.setEditable(true);
+
             CheckBox checkBox = (CheckBox) checkBoxColumn.getGraphic();
-            itemB.getValue().setFirst("true");
+            itemA.getValue().setFirst("true");
             checkBoxColumn.refreshFilter();
             assertTrue(checkBox.isIndeterminate());
 
-            checkBox.setIndeterminate(false);
-            checkBox.setSelected(true);
+            checkBox.setSelected(false);
+            checkBox.fire();
 
             assertEquals("true", itemA.getValue().first());
             assertEquals("false", itemA1.getValue().first());
             assertEquals("true", itemB.getValue().first());
+            assertEquals("true", itemC.getValue().first());
+            assertTrue(checkBox.isSelected());
         });
     }
 

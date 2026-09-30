@@ -43,15 +43,14 @@ public class CheckBoxTreeTableCell<S> extends ExtendedTreeTableCell<S, Boolean> 
 
             if (checkBox == null) {
                 checkBox = createCheckBox();
+                checkBox.disableProperty().bind(Bindings.not(
+                        getTreeTableView().editableProperty().and(getTableColumn().editableProperty())
+                                .and(getTableRow().editableProperty()).and(editableProperty())));
             }
 
             isInUpdate = true;
             checkBox.setSelected(item);
             isInUpdate = false;
-
-            checkBox.disableProperty().bind(Bindings.not(
-                    getTreeTableView().editableProperty().and(getTableColumn().editableProperty())
-                            .and(getTableRow().editableProperty()).and(editableProperty())));
 
             setGraphic(checkBox);
         }

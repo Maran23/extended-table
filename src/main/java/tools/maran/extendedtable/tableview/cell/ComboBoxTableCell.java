@@ -104,12 +104,11 @@ public class ComboBoxTableCell<S, T> extends ExtendedTableCell<S, T> {
         } else {
             if (comboBox == null) {
                 comboBox = createComboBox();
+                comboBox.disableProperty().bind(Bindings.not(
+                        getTableView().editableProperty().and(getTableColumn().editableProperty())
+                                .and(getTableRow().editableProperty()).and(editableProperty())));
             }
             comboBox.getSelectionModel().select(item);
-
-            comboBox.disableProperty().bind(Bindings.not(
-                    getTableView().editableProperty().and(getTableColumn().editableProperty())
-                            .and(getTableRow().editableProperty()).and(editableProperty())));
 
             setGraphic(comboBox);
         }

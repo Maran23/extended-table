@@ -16,10 +16,10 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
 
+import tools.maran.extendedtable.table.common.TableI18N;
 import tools.maran.extendedtable.treetableview.ExtendedTreeTableView;
 import tools.maran.extendedtable.treetableview.cell.CheckBoxTreeTableCell;
 import tools.maran.extendedtable.treetableview.cell.ExtendedTreeTableCell;
-import tools.maran.extendedtable.table.common.TableI18N;
 
 /// Implementation of a [GenericTreeTableColumn] with a [CheckBox] in the header that supports only [Boolean].
 /// Null is considered an empty not changeable value.
@@ -33,7 +33,7 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
     private WeakInvalidationListener weakColumnsChangedListener;
 
     private CheckBox checkBox;
-    private boolean suppressSelectionListener;
+    private boolean isSelectingAll;
 
     private BooleanProperty allSelectableProperty;
 
@@ -54,9 +54,7 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
     public void refreshFilter() {
         super.refreshFilter();
 
-        suppressSelectionListener = true;
         decideCheckBoxState();
-        suppressSelectionListener = false;
     }
 
     @Override
@@ -72,7 +70,7 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
                 bool -> bool == null ? "" : bool ? TableI18N.message("selected") : TableI18N.message("unselected"));
 
         checkBox = new CheckBox();
-        checkBox.selectedProperty().addListener((_, _, newV) -> selectAllItems(newV));
+        checkBox.setOnAction(_ -> selectAllItems(checkBox.isSelected()));
         setGraphic(checkBox);
 
         allSelectableProperty = new SimpleBooleanProperty(true);
@@ -92,9 +90,7 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
     protected void onItemsChanged(ObservableList<TreeItem<S>> items) {
         super.onItemsChanged(items);
 
-        suppressSelectionListener = true;
         decideCheckBoxState();
-        suppressSelectionListener = false;
     }
 
     /// Shows or hides the header [CheckBox] depending on whether this column has nested columns.
@@ -108,9 +104,7 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
         } else {
             setGraphic(checkBox);
 
-            suppressSelectionListener = true;
             decideCheckBoxState();
-            suppressSelectionListener = false;
         }
     }
 
@@ -118,9 +112,11 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
     protected void postCommit(TreeItem<S> item, Boolean oldValue, Boolean newValue) {
         super.postCommit(item, oldValue, newValue);
 
-        suppressSelectionListener = true;
+        if (isSelectingAll) {
+            return;
+        }
+
         decideCheckBoxState(newValue);
-        suppressSelectionListener = false;
     }
 
     private boolean allItemsSelected() {
@@ -210,27 +206,31 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
     }
 
     private void selectAllItems(boolean newValue) {
-        if (suppressSelectionListener) {
-            return;
-        }
+        TreeTableView<S> treeTableView = getTreeTableView();
 
-        ObservableList<TreeItem<S>> items = getItems();
-        for (TreeItem<S> item : items) {
-            Boolean oldValue = readValue(item.getValue());
-            // We can not change a null value.
-            if (oldValue == null) {
-                continue;
+        isSelectingAll = true;
+        // TreeTableView.getRow() is linear, so the row is tracked and only looked up after an expanded item.
+        int row = -1;
+        for (TreeItem<S> item : getItems()) {
+            if (row < 0) {
+                row = treeTableView.getRow(item);
             }
 
-            // Fire an event the same way JavaFX does so that all listeners will be triggered.
-            TreeTableColumn.CellEditEvent<S, Boolean> editEvent = new TreeTableColumn.CellEditEvent<>(
-                    getTreeTableView(), new TreeTablePosition<>(getTreeTableView(), getTreeTableView().getRow(item), this),
-                    TreeTableColumn.editCommitEvent(), newValue);
-            Event.fireEvent(this, editEvent);
+            Boolean oldValue = readValue(item.getValue());
+            // We can not change a null value.
+            if (oldValue != null) {
+                // Fire an event the same way JavaFX does so that all listeners will be triggered.
+                CellEditEvent<S, Boolean> editEvent = new CellEditEvent<>(treeTableView,
+                        new TreeTablePosition<>(treeTableView, row, this), TreeTableColumn.editCommitEvent(), newValue);
+                Event.fireEvent(this, editEvent);
+            }
+
+            row = item.isExpanded() && !item.isLeaf() ? -1 : row + 1;
         }
+        isSelectingAll = false;
 
         // Since we changed the state of all cells of this column, we need to refresh them.
-        ((ExtendedTreeTableView<S>) getTreeTableView()).refreshColumn(this);
+        ((ExtendedTreeTableView<S>) treeTableView).refreshColumn(this);
     }
 
 }
