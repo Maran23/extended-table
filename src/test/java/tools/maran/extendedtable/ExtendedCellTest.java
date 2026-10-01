@@ -3,21 +3,20 @@ package tools.maran.extendedtable;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import javafx.beans.property.SimpleObjectProperty;
+import java.util.List;
+
+import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableView;
 import javafx.stage.Stage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import tools.maran.extendedtable.data.TableType;
+import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.tableview.cell.ExtendedTableCell;
 import tools.maran.extendedtable.treetableview.cell.ExtendedTreeTableCell;
 
@@ -35,75 +34,35 @@ class ExtendedCellTest extends JavaFxTest {
 
     @DisplayName("A cell with a null value is not empty when its row item is added again")
     @ParameterizedTest
-    @EnumSource(CellTableType.class)
-    void testCellWithNullValueIsNotEmptyWhenItsRowItemIsAddedAgain(CellTableType tableType) {
+    @EnumSource(TableType.class)
+    @SuppressWarnings("unchecked")
+    void testCellWithNullValueIsNotEmptyWhenItsRowItemIsAddedAgain(TableType tableType) {
         runOnFxThread(() -> {
-            CellTable cellTable = tableType.create();
-            Control table = cellTable.table();
+            Control table = tableType.createTable(List.of(tableType.createColumn("Column", null)));
+            ObservableList<Object> items = (ObservableList<Object>) ((ExtendedTable<?>) table).getBackingItems();
 
             stage = new Stage();
             stage.setScene(new Scene(table, 400, 300));
             stage.show();
             table.layout();
 
-            IndexedCell<?> cell = getLastRowCell(cellTable);
+            IndexedCell<?> cell = getLastRowCell(tableType, table);
             assertFalse(cell.isEmpty());
 
-            cellTable.removeLastRow().run();
+            Object lastRow = items.removeLast();
             table.layout();
-            cell = getLastRowCell(cellTable);
+            cell = getLastRowCell(tableType, table);
             assertTrue(cell.isEmpty());
 
-            cellTable.addLastRow().run();
+            items.add(lastRow);
             table.layout();
-            cell = getLastRowCell(cellTable);
+            cell = getLastRowCell(tableType, table);
             assertFalse(cell.isEmpty());
         });
     }
 
-    private IndexedCell<?> getLastRowCell(CellTable cellTable) {
-        return cellTable.table().lookupAll(cellTable.cellSelector()).stream().map(node -> (IndexedCell<?>) node)
+    private IndexedCell<?> getLastRowCell(TableType tableType, Control table) {
+        return table.lookupAll(tableType.getCellSelector()).stream().map(node -> (IndexedCell<?>) node)
                 .filter(cell -> cell.getIndex() == 1).findFirst().orElseThrow();
-    }
-
-    private record CellTable(Control table, String cellSelector, Runnable removeLastRow, Runnable addLastRow) { }
-
-    private enum CellTableType {
-        TABLE_VIEW {
-            @Override
-            CellTable create() {
-                TableColumn<String, String> column = new TableColumn<>("Column");
-                column.setCellValueFactory(_ -> new SimpleObjectProperty<>(null));
-                column.setCellFactory(_ -> new ExtendedTableCell<>());
-
-                String lastRow = "Last";
-                TableView<String> table = new TableView<>();
-                table.getColumns().add(column);
-                table.getItems().addAll("First", lastRow);
-
-                return new CellTable(table, ".table-cell", () -> table.getItems().remove(lastRow),
-                        () -> table.getItems().add(lastRow));
-            }
-        }, TREE_TABLE_VIEW {
-            @Override
-            CellTable create() {
-                TreeTableColumn<String, String> column = new TreeTableColumn<>("Column");
-                column.setCellValueFactory(_ -> new SimpleObjectProperty<>(null));
-                column.setCellFactory(_ -> new ExtendedTreeTableCell<>());
-
-                TreeItem<String> lastRow = new TreeItem<>("Last");
-                TreeItem<String> root = new TreeItem<>();
-                root.getChildren().addAll(new TreeItem<>("First"), lastRow);
-
-                TreeTableView<String> table = new TreeTableView<>(root);
-                table.setShowRoot(false);
-                table.getColumns().add(column);
-
-                return new CellTable(table, ".tree-table-cell", () -> root.getChildren().remove(lastRow),
-                        () -> root.getChildren().add(lastRow));
-            }
-        };
-
-        abstract CellTable create();
     }
 }

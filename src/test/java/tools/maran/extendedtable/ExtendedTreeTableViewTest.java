@@ -1,7 +1,6 @@
 package tools.maran.extendedtable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -90,26 +89,6 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
             assertEquals("true", itemB.getValue().first());
             assertEquals("true", itemC.getValue().first());
             assertTrue(checkBox.isSelected());
-        });
-    }
-
-    @DisplayName("Null items deselect the header checkbox")
-    @Test
-    void testNullItemsDeselectTheHeaderCheckBox() {
-        runOnFxThread(() -> {
-            CheckBoxTreeTableColumn<Row> checkBoxColumn = new CheckBoxTreeTableColumn<>();
-            checkBoxColumn.setReadFunction(row -> Boolean.valueOf(row.first()));
-            table.getColumns().add(checkBoxColumn);
-
-            itemA.getValue().setFirst("true");
-            checkBoxColumn.refreshFilter();
-
-            table.setItems(null);
-            assertTrue(table.getRoot().getChildren().isEmpty());
-
-            CheckBox checkBox = (CheckBox) checkBoxColumn.getGraphic();
-            assertFalse(checkBox.isSelected());
-            assertFalse(checkBox.isIndeterminate());
         });
     }
 

@@ -9,10 +9,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
+import javafx.scene.Node;
+import javafx.scene.control.Control;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
@@ -23,14 +27,18 @@ import tools.maran.extendedtable.filter.popup.FilterPopupControl;
 import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.tableview.ExtendedTableView;
 import tools.maran.extendedtable.tableview.column.AbstractFilterTableColumn;
+import tools.maran.extendedtable.tableview.cell.ExtendedTableCell;
+import tools.maran.extendedtable.tableview.column.CheckBoxTableColumn;
 import tools.maran.extendedtable.tableview.column.StringTableColumn;
 import tools.maran.extendedtable.treetableview.ExtendedTreeTableView;
+import tools.maran.extendedtable.treetableview.cell.ExtendedTreeTableCell;
 import tools.maran.extendedtable.treetableview.column.AbstractFilterTreeTableColumn;
+import tools.maran.extendedtable.treetableview.column.CheckBoxTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.StringTreeTableColumn;
 
-/// The tables which support filtering.
+/// The table types every table test runs against.
 public enum TableType {
-    TABLE_VIEW {
+    TABLE_VIEW(".table-cell") {
         @Override
         public ItemTable<Object> createItemTable() {
             return new ItemTable<>(new ExtendedTableView<>(), Object::new);
@@ -40,7 +48,55 @@ public enum TableType {
         public FilterTableFixture createFixture() {
             return new TableViewFixture(new ExtendedTableView<>());
         }
-    }, TREE_TABLE_VIEW {
+
+        @Override
+        public TableColumnBase<?, ?> createColumn(String text, String value, Supplier<Node> cellGraphicFactory) {
+            TableColumn<Row, String> column = new TableColumn<>(text);
+            column.setCellValueFactory(_ -> new SimpleStringProperty(value));
+            column.setCellFactory(_ -> new ExtendedTableCell<>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    setText(empty ? null : item);
+                    setGraphic(empty ? null : cellGraphicFactory.get());
+                }
+            });
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?> child) {
+            TableColumn<Row, ?> column = new TableColumn<>(text);
+            column.getColumns().add((TableColumn) child);
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createCheckBoxColumn() {
+            CheckBoxTableColumn<Row> column = new CheckBoxTableColumn<>();
+            column.setReadFunction(row -> Boolean.valueOf(row.first()));
+            column.setWriteFunction((row, value) -> row.setFirst(value.toString()));
+            return column;
+        }
+
+        @Override
+        public Control createTable(List<TableColumnBase<?, ?>> columns, List<Row> rows) {
+            ExtendedTableView<Row> table = new ExtendedTableView<>(FXCollections.observableArrayList(rows));
+            columns.forEach(column -> table.getColumns().add((TableColumn) column));
+            return table;
+        }
+
+        @Override
+        public void setEditable(Control table, boolean editable) {
+            ((ExtendedTableView<?>) table).setEditable(editable);
+        }
+
+        @Override
+        public void autosizeColumns(Control table) {
+            ((ExtendedTableView<?>) table).autosizeColumns();
+        }
+    }, TREE_TABLE_VIEW(".tree-table-cell") {
         @Override
         public ItemTable<TreeItem<Object>> createItemTable() {
             return new ItemTable<>(new ExtendedTreeTableView<>(), () -> new TreeItem<>(new Object()));
@@ -50,11 +106,98 @@ public enum TableType {
         public FilterTableFixture createFixture() {
             return new TreeTableViewFixture(new ExtendedTreeTableView<>());
         }
+
+        @Override
+        public TableColumnBase<?, ?> createColumn(String text, String value, Supplier<Node> cellGraphicFactory) {
+            TreeTableColumn<Row, String> column = new TreeTableColumn<>(text);
+            column.setCellValueFactory(_ -> new SimpleStringProperty(value));
+            column.setCellFactory(_ -> new ExtendedTreeTableCell<>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    setText(empty ? null : item);
+                    setGraphic(empty ? null : cellGraphicFactory.get());
+                }
+            });
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?> child) {
+            TreeTableColumn<Row, ?> column = new TreeTableColumn<>(text);
+            column.getColumns().add((TreeTableColumn) child);
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createCheckBoxColumn() {
+            CheckBoxTreeTableColumn<Row> column = new CheckBoxTreeTableColumn<>();
+            column.setReadFunction(row -> Boolean.valueOf(row.first()));
+            column.setWriteFunction((row, value) -> row.setFirst(value.toString()));
+            return column;
+        }
+
+        @Override
+        public Control createTable(List<TableColumnBase<?, ?>> columns, List<Row> rows) {
+            ExtendedTreeTableView<Row> table = new ExtendedTreeTableView<>();
+            table.setItems(FXCollections.observableArrayList(rows.stream().map(TreeItem::new).toList()));
+            columns.forEach(column -> table.getColumns().add((TreeTableColumn) column));
+            return table;
+        }
+
+        @Override
+        public void setEditable(Control table, boolean editable) {
+            ((ExtendedTreeTableView<?>) table).setEditable(editable);
+        }
+
+        @Override
+        public void autosizeColumns(Control table) {
+            ((ExtendedTreeTableView<?>) table).autosizeColumns();
+        }
     };
+
+    private final String cellSelector;
+
+    TableType(String cellSelector) {
+        this.cellSelector = cellSelector;
+    }
+
+    public abstract void autosizeColumns(Control table);
+
+    /// Creates a checkbox column, which reads and writes the first value of a [Row].
+    public abstract TableColumnBase<?, ?> createCheckBoxColumn();
+
+    /// Creates a column with an [ExtendedTableCell] or [ExtendedTreeTableCell], which shows the given value and a
+    /// graphic from the given factory in every non-empty cell.
+    public abstract TableColumnBase<?, ?> createColumn(String text, String value, Supplier<Node> cellGraphicFactory);
+
+    /// Creates a column with an [ExtendedTableCell] or [ExtendedTreeTableCell], which shows the given value.
+    public TableColumnBase<?, ?> createColumn(String text, String value) {
+        return createColumn(text, value, () -> null);
+    }
 
     public abstract FilterTableFixture createFixture();
 
     public abstract ItemTable<?> createItemTable();
+
+    /// Creates a column which contains the given child column.
+    public abstract TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?> child);
+
+    /// Creates a table with the given columns and rows.
+    public abstract Control createTable(List<TableColumnBase<?, ?>> columns, List<Row> rows);
+
+    /// Creates a table with the given columns and two rows.
+    public Control createTable(List<TableColumnBase<?, ?>> columns) {
+        return createTable(columns, List.of(new Row("1", "1", "1"), new Row("2", "2", "2")));
+    }
+
+    /// Returns the CSS selector of the cells inside a table created by [#createTable(List)].
+    public String getCellSelector() {
+        return cellSelector;
+    }
+
+    public abstract void setEditable(Control table, boolean editable);
 
     public record ItemTable<T>(ExtendedTable<T> table, Supplier<T> newItemFactory) { }
 
