@@ -45,7 +45,7 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
 
         super.cancelEdit();
 
-        // A commitEdit(..) refreshes its cell (updateItem(-1), but a cancel does not, we therefore call it manually.
+        // A commitEdit(..) refreshes its cell (updateItem(..)), but a cancel does not, we therefore call it manually.
         updateItem(getItem(), isEmpty());
 
         requestFocusBackToTable(focusOwner);

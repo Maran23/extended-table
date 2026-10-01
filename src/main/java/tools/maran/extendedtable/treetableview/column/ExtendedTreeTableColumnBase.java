@@ -166,7 +166,7 @@ public abstract class ExtendedTreeTableColumnBase<S, T> extends TreeTableColumn<
 
     /// Returns the items of the table this column belongs to.
     ///
-    /// @return the items of the table, or null if this column is not part of a table
+    /// @return the items of the table, or an empty list if this column is not part of a table
     protected final ObservableList<TreeItem<S>> getItems() {
         TreeItem<S> root = treeTableRootRef.get();
         if (root == null) {

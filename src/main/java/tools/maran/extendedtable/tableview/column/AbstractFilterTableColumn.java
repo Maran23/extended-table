@@ -107,13 +107,13 @@ public abstract class AbstractFilterTableColumn<S, T> extends ExtendedTableColum
     }
 
     @Override
-    public final void setFiltered(boolean filtered) {
-        filteredPropertyImpl().set(filtered);
+    public final void setFilterPopupFactory(Supplier<FilterPopupControl<S>> filterPopupFactory) {
+        this.filterPopupFactory = filterPopupFactory;
     }
 
     @Override
-    public final void setFilterPopupFactory(Supplier<FilterPopupControl<S>> filterPopupFactory) {
-        this.filterPopupFactory = filterPopupFactory;
+    public final void setFiltered(boolean filtered) {
+        filteredPropertyImpl().set(filtered);
     }
 
     /// Sets whether the filtering of this column is disabled. A column with nested columns is never filterable.
@@ -166,22 +166,6 @@ public abstract class AbstractFilterTableColumn<S, T> extends ExtendedTableColum
         return toStringConverter.call(item);
     }
 
-    private FilterPopupControl<S> createFilterPopupControl() {
-        FilterPopupControl<S> popupControl = filterPopupFactory.get();
-        popupControl.fixedCellSizeProperty().bind(getTableView().fixedCellSizeProperty());
-        popupControl.setReadFunction(item -> convertToString(readValue(item)));
-
-        popupHiddenHandler = _ -> doAction(popupControl.getStatus());
-        weakPopupHiddenHandler = new WeakEventHandler<>(popupHiddenHandler);
-
-        popupControl.setBackingItems(getBackingItems());
-        popupControl.setItems(getItems());
-
-        popupControl.setOnHidden(weakPopupHiddenHandler);
-
-        return popupControl;
-    }
-
     @Override
     protected void onBackingItemsChanged(ObservableList<S> items) {
         if (filterPopupControl != null) {
@@ -197,7 +181,7 @@ public abstract class AbstractFilterTableColumn<S, T> extends ExtendedTableColum
     }
 
     @Override
-    protected void postCommit(S item, T oldValue, T value) {
+    protected void postCommit(S item, T oldValue, T newValue) {
         if (filterPopupControl != null) {
             filterPopupControl.refreshItem(item);
         }
@@ -205,6 +189,22 @@ public abstract class AbstractFilterTableColumn<S, T> extends ExtendedTableColum
 
     private void applyFilter() {
         getExtendedTableView().filter(this, filterPopupControl.getSelectedItems());
+    }
+
+    private FilterPopupControl<S> createFilterPopupControl() {
+        FilterPopupControl<S> popupControl = filterPopupFactory.get();
+        popupControl.fixedCellSizeProperty().bind(getTableView().fixedCellSizeProperty());
+        popupControl.setReadFunction(item -> convertToString(readValue(item)));
+
+        popupHiddenHandler = _ -> doAction(popupControl.getStatus());
+        weakPopupHiddenHandler = new WeakEventHandler<>(popupHiddenHandler);
+
+        popupControl.setBackingItems(getBackingItems());
+        popupControl.setItems(getItems());
+
+        popupControl.setOnHidden(weakPopupHiddenHandler);
+
+        return popupControl;
     }
 
     private void doAction(Status status) {

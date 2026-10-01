@@ -244,7 +244,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
         return Optional.empty();
     }
 
-    private TableColumnBase<TreeItem<S>, ?> getTopMostColumn(TreeTableColumn<S, ?> column) {
+    private TableColumnBase<TreeItem<S>, ?> getTopMostColumn(TableColumnBase<TreeItem<S>, ?> column) {
         TableColumnBase<TreeItem<S>, ?> topMostColumn = column;
         while (topMostColumn.getParentColumn() != null) {
             topMostColumn = topMostColumn.getParentColumn();
@@ -258,7 +258,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
         double fixedCellSize = treeTableView.getFixedCellSize();
 
         double fixedColumnWidth = 0;
-        int counter = fixedColumnCount;
+        int fixedColumnCounter = fixedColumnCount;
         double newX = snapPositionX(x + Math.abs(hScrollValue - x));
         double startX = newX;
 
@@ -283,7 +283,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
 
             TableColumnBase<TreeItem<S>, ?> currentTopMostColumn = getTopMostColumn(column);
             boolean differentTopMostColumn = currentTopMostColumn != previousTopMostColumn;
-            if (counter <= 0 && differentTopMostColumn) {
+            if (fixedColumnCounter <= 0 && differentTopMostColumn) {
                 tableCell.getStyleClass().remove(FIXED_TREE_TABLE_CELL);
                 continue;
             }
@@ -291,7 +291,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
             // When this is the cell of the same top most column we don't decrement the counter as they belong
             // together.
             if (differentTopMostColumn) {
-                counter--;
+                fixedColumnCounter--;
             }
 
             if (!tableCell.getStyleClass().contains(FIXED_TREE_TABLE_CELL)) {

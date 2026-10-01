@@ -21,15 +21,6 @@ public class Row {
         return second;
     }
 
-    public String third() {
-        return third;
-    }
-
-    @Override
-    public String toString() {
-        return "Row[" + first + ", " + second + ", " + third + "]";
-    }
-
     public void setFirst(String first) {
         this.first = first;
     }
@@ -40,5 +31,14 @@ public class Row {
 
     public void setThird(String third) {
         this.third = third;
+    }
+
+    public String third() {
+        return third;
+    }
+
+    @Override
+    public String toString() {
+        return "Row[" + first + ", " + second + ", " + third + "]";
     }
 }

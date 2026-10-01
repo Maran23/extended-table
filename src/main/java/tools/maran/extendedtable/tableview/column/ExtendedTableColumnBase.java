@@ -8,6 +8,7 @@ import java.util.function.Predicate;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -154,9 +155,10 @@ public abstract class ExtendedTableColumnBase<S, T> extends TableColumn<S, T> im
 
     /// Returns the items of the table this column belongs to.
     ///
-    /// @return the items of the table, or null if this column is not part of a table
+    /// @return the items of the table, or an empty list if this column is not part of a table
     protected final ObservableList<S> getItems() {
-        return tableItemsRef.get();
+        ObservableList<S> items = tableItemsRef.get();
+        return items == null ? FXCollections.emptyObservableList() : items;
     }
 
     /// Initializes this column. Called once by the constructor after the column was set up.

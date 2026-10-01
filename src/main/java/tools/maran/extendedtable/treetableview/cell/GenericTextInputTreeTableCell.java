@@ -53,7 +53,7 @@ public abstract class GenericTextInputTreeTableCell<S, T> extends ExtendedTreeTa
             return;
         }
 
-        // Reset graphic before committing, as the commit will call updateItem(..).
+        // Reset graphic before committing, so if updateItem(..) is called, the state is already reset.
         resetGraphic();
 
         super.commitEdit(newValue);

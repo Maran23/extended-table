@@ -33,12 +33,10 @@ class ExtendedCellTest extends JavaFxTest {
         runOnFxThread(stage::close);
     }
 
-    /// JavaFX keeps the old row item of an empty cell and therefore skips the update when the same row item
-    /// is added again at the same index and the cell value did not change (`null`).
     @DisplayName("A cell with a null value is not empty when its row item is added again")
     @ParameterizedTest
-    @EnumSource(TableType.class)
-    void testCellWithNullValueIsNotEmptyWhenItsRowItemIsAddedAgain(TableType tableType) {
+    @EnumSource(CellTableType.class)
+    void testCellWithNullValueIsNotEmptyWhenItsRowItemIsAddedAgain(CellTableType tableType) {
         runOnFxThread(() -> {
             CellTable cellTable = tableType.create();
             Control table = cellTable.table();
@@ -64,16 +62,13 @@ class ExtendedCellTest extends JavaFxTest {
     }
 
     private IndexedCell<?> getLastRowCell(CellTable cellTable) {
-        return cellTable.table().lookupAll(cellTable.cellSelector()).stream()
-                .map(node -> (IndexedCell<?>) node)
-                .filter(cell -> cell.getIndex() == 1)
-                .findFirst()
-                .orElseThrow();
+        return cellTable.table().lookupAll(cellTable.cellSelector()).stream().map(node -> (IndexedCell<?>) node)
+                .filter(cell -> cell.getIndex() == 1).findFirst().orElseThrow();
     }
 
     private record CellTable(Control table, String cellSelector, Runnable removeLastRow, Runnable addLastRow) { }
 
-    private enum TableType {
+    private enum CellTableType {
         TABLE_VIEW {
             @Override
             CellTable create() {

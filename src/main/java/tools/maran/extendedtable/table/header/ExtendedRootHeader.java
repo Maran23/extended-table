@@ -72,8 +72,8 @@ public class ExtendedRootHeader extends ExtendedNestedTableColumnHeader {
         // we need to collect the drag rectangles manually here, as they are private in NestedTableColumnHeader
         Map<TableColumnBase<?, ?>, Rectangle> dragRects = new HashMap<>();
         for (Node node : getChildren()) {
-            if (node instanceof Rectangle rect && rect.getProperties().get(KEY)
-                    instanceof TableColumnBase<?, ?> tableColumn) {
+            if (node instanceof Rectangle rect && rect.getProperties()
+                    .get(KEY) instanceof TableColumnBase<?, ?> tableColumn) {
                 dragRects.put(tableColumn, rect);
             }
         }

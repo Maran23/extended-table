@@ -89,7 +89,6 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
     private final WeakInvalidationListener weakItemsInvalidatedListener = new WeakInvalidationListener(
             itemsInvalidatedListener);
 
-
     // The number of columns that should be fixed starting from the first column.
     private IntegerProperty fixedColumnCount;
     // Provides the cell size of a row (item). Ignored when a fixed cell size is set.
@@ -428,7 +427,8 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
                 @Override
                 protected void invalidated() {
                     if (get()) {
-                        tableValidator = new TableValidator<>(ExtendedTableView.this.getVisibleLeafColumns(), getItems());
+                        tableValidator = new TableValidator<>(ExtendedTableView.this.getVisibleLeafColumns(),
+                                getItems());
 
                         validPropertyImpl().bind(tableValidator.validProperty());
                     } else {

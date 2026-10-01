@@ -450,7 +450,7 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
     @Override
     public final void setItems(ObservableList<TreeItem<S>> items) {
         // Note: We do not need to change the itemsProperty() as it is already set to getRoot().getChildren() (reference).
-        tableFilter.setItems(items);
+        tableFilter.setItems(items == null ? List.of() : items);
     }
 
     @Override
@@ -519,7 +519,8 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
                 @Override
                 protected void invalidated() {
                     if (get()) {
-                        tableValidator = new TableValidator<>(ExtendedTreeTableView.this.getVisibleLeafColumns(), getAllTreeItems());
+                        tableValidator = new TableValidator<>(ExtendedTreeTableView.this.getVisibleLeafColumns(),
+                                getAllTreeItems());
 
                         validPropertyImpl().bind(tableValidator.validProperty());
                     } else {

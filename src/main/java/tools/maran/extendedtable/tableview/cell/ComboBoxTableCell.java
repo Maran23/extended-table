@@ -38,6 +38,14 @@ public class ComboBoxTableCell<S, T> extends ExtendedTableCell<S, T> {
         setAlignment(Pos.CENTER);
     }
 
+    /// Sets the read function which transforms the cell value into the text shown in the [ComboBox].
+    ///
+    /// @param readFunction
+    ///         the read function
+    public final void setReadFunction(Callback<T, String> readFunction) {
+        this.readFunction = readFunction;
+    }
+
     /// Creates the [ComboBox] which is shown when this cell is edited.
     ///
     /// @return the newly created [ComboBox]
@@ -73,14 +81,6 @@ public class ComboBoxTableCell<S, T> extends ExtendedTableCell<S, T> {
         cbx.setOnMousePressed(_ -> getTableView().getSelectionModel().select(getIndex(), getTableColumn()));
 
         return cbx;
-    }
-
-    /// Sets the read function which transforms the cell value into the text shown in the [ComboBox].
-    ///
-    /// @param readFunction
-    ///         the read function
-    public final void setReadFunction(Callback<T, String> readFunction) {
-        this.readFunction = readFunction;
     }
 
     /// Calls the read function of the cell to get the value.

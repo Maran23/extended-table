@@ -1,8 +1,8 @@
 /* Fixed table cells: Should have a background as otherwise we can see through. */
 
 .fixed-tree-table-cell {
-   -fx-background: -fx-control-inner-background;
-   -fx-background-color: -fx-background;
+    -fx-background: -fx-control-inner-background;
+    -fx-background-color: -fx-background;
 }
 
 /* Fixed tree table cell selected but not focused (anymore) */

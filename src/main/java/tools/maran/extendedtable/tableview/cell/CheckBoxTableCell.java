@@ -29,19 +29,6 @@ public class CheckBoxTableCell<S> extends ExtendedTableCell<S, Boolean> {
         return checkBoxNode;
     }
 
-    private void startAndCommitEdit(CheckBox checkBoxNode) {
-        if (isInUpdate) {
-            return;
-        }
-
-        boolean isSelected = checkBoxNode.isSelected();
-
-        // startEdit() will call updateItem(), which will update the checkbox again,
-        // so we save the previous selected flag.
-        startEdit();
-        commitEdit(isSelected);
-    }
-
     @Override
     protected void updateItem(Boolean item, boolean empty) {
         super.updateItem(item, empty);
@@ -67,4 +54,16 @@ public class CheckBoxTableCell<S> extends ExtendedTableCell<S, Boolean> {
         }
     }
 
+    private void startAndCommitEdit(CheckBox checkBoxNode) {
+        if (isInUpdate) {
+            return;
+        }
+
+        boolean isSelected = checkBoxNode.isSelected();
+
+        // startEdit() will call updateItem(), which will update the checkbox again,
+        // so we save the previous selected flag.
+        startEdit();
+        commitEdit(isSelected);
+    }
 }

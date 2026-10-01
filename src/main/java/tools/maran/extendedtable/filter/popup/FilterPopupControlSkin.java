@@ -410,7 +410,8 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
     }
 
     private void updateSelectionIndicatorLbl() {
-        filterBox.getSelectionIndicatorLabel().setText(TableI18N.message("count.selected", selectedCounter, getMaxCount()));
+        filterBox.getSelectionIndicatorLabel()
+                .setText(TableI18N.message("count.selected", selectedCounter, getMaxCount()));
     }
 
     /// Enum representing the current selection state.

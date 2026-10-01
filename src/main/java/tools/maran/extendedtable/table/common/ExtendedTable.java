@@ -35,6 +35,11 @@ public interface ExtendedTable<S> {
         return (EventType<CommitEvent<S>>) COMMIT_EVENT;
     }
 
+    /// Returns the editing property.
+    ///
+    /// @return the editing property
+    BooleanProperty editingProperty();
+
     /// Filters this table by the given column, so that column only lets the given items through.
     /// The items shown are all backing items which are not filtered out by any filtered column.
     ///
@@ -48,11 +53,6 @@ public interface ExtendedTable<S> {
     /// @throws IllegalArgumentException
     ///         when a filtered item is not inside the backing items
     void filter(FilterableColumn<S> column, Collection<S> filteredItems);
-
-    /// Returns the editing property.
-    ///
-    /// @return the editing property
-    BooleanProperty editingProperty();
 
     /// Returns the backing items [ObservableList]. The last items set via [#setItems(ObservableList)] are
     /// considered the 'backing' items.

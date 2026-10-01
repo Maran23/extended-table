@@ -152,7 +152,8 @@ public class TableValidator<S> {
 
     /// Result for a validation (of all [TableColumnBase]) of an item.
     ///
-    /// @param columnResultMap the map from column to the result
+    /// @param columnResultMap
+    ///         the map from column to the result
     /// @param <S>
     ///         the item type
     private record ItemValidationResult<S>(WeakHashMap<TableColumnBase<S, ?>, Boolean> columnResultMap) {

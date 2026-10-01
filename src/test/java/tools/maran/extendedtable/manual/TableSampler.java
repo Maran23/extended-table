@@ -88,14 +88,12 @@ public final class TableSampler {
 
     private static <T> MenuButton createActionsButton(ExtendedTable<T> table, IntFunction<List<T>> generator) {
         Supplier<T> newItem = () -> generator.apply(1).getFirst();
-        return new MenuButton("Actions", null,
-                createMenuItem("Regenerate", () -> table.setItems(FXCollections.observableArrayList(generator.apply(ITEM_COUNT)))),
-                new SeparatorMenuItem(),
-                createMenuItem("Add first", () -> add(table, 0, newItem.get())),
+        return new MenuButton("Actions", null, createMenuItem("Regenerate",
+                () -> table.setItems(FXCollections.observableArrayList(generator.apply(ITEM_COUNT)))),
+                new SeparatorMenuItem(), createMenuItem("Add first", () -> add(table, 0, newItem.get())),
                 createMenuItem("Add middle", () -> add(table, table.getItems().size() / 2, newItem.get())),
                 createMenuItem("Add last", () -> add(table, table.getItems().size(), newItem.get())),
-                new SeparatorMenuItem(),
-                createMenuItem("Remove first", () -> remove(table, 0)),
+                new SeparatorMenuItem(), createMenuItem("Remove first", () -> remove(table, 0)),
                 createMenuItem("Remove middle", () -> remove(table, table.getItems().size() / 2)),
                 createMenuItem("Remove last", () -> remove(table, table.getItems().size() - 1)));
     }
@@ -241,18 +239,16 @@ public final class TableSampler {
         tableView.setHeaderText("Persons");
         tableView.setFixedColumnCount(2);
 
-        tableView.getColumns()
-                .addAll(createIdColumn(), createNameColumn(), createAgeColumn(),
-                        createActiveColumn(), createDepartmentColumn(), createSalaryColumn(), createEmailColumn(),
-                        createHireDateColumn(), createNotesColumn());
+        tableView.getColumns().addAll(createIdColumn(), createNameColumn(), createAgeColumn(), createActiveColumn(),
+                createDepartmentColumn(), createSalaryColumn(), createEmailColumn(), createHireDateColumn(),
+                createNotesColumn());
 
         tableView.getColumns().forEach(column -> column.setSortable(true));
 
         tableView.setItems(FXCollections.observableArrayList(GENERATOR.generate(ITEM_COUNT)));
         tableView.setValidationEnabled(true);
 
-        MenuButton options = new MenuButton("Options", null,
-                createToggle("Editable", tableView.editableProperty()),
+        MenuButton options = new MenuButton("Options", null, createToggle("Editable", tableView.editableProperty()),
                 createToggle("Validation", tableView.validationEnabledProperty()),
                 createFixedCellSizeToggle(tableView.fixedCellSizeProperty()));
         tableView.getHeaderButtons().addAll(options,
@@ -282,7 +278,6 @@ public final class TableSampler {
         CheckBoxTreeTableColumn<Person> column = new CheckBoxTreeTableColumn<>("Active");
         column.setReadFunction(Person::active);
         column.setWriteFunction(Person::setActive);
-        column.setPrefWidth(80);
         return column;
     }
 
@@ -291,7 +286,6 @@ public final class TableSampler {
         column.setReadFunction(Person::age);
         column.setWriteFunction(Person::setAge);
         column.setValidator(TableSampler::isValidAge);
-        column.setPrefWidth(80);
         return column;
     }
 
@@ -309,7 +303,6 @@ public final class TableSampler {
         column.setWriteFunction(Person::setDepartment);
         column.setToStringConverter(TableSampler::departmentLabel);
         column.setFromStringConverter(Department::fromLabel);
-        column.setPrefWidth(150);
         return column;
     }
 
@@ -318,7 +311,6 @@ public final class TableSampler {
         column.setReadFunction(Person::email);
         column.setWriteFunction(Person::setEmail);
         column.setValidator(TableSampler::isValidEmail);
-        column.setPrefWidth(260);
         return column;
     }
 
@@ -327,7 +319,6 @@ public final class TableSampler {
         column.setReadFunction(Person::firstName);
         column.setWriteFunction(Person::setFirstName);
         column.setValidator(TableSampler::isNotBlank);
-        column.setPrefWidth(130);
         return column;
     }
 
@@ -337,7 +328,6 @@ public final class TableSampler {
         column.setWriteFunction(Person::setHireDate);
         column.setToStringConverter(TableSampler::formatDate);
         column.setFromStringConverter(TableSampler::parseDate);
-        column.setPrefWidth(110);
         return column;
     }
 
@@ -345,7 +335,6 @@ public final class TableSampler {
         LongTreeTableColumn<Person> column = new LongTreeTableColumn<>("ID");
         column.setReadFunction(Person::id);
         column.setEditable(false);
-        column.setPrefWidth(160);
         return column;
     }
 
@@ -365,7 +354,6 @@ public final class TableSampler {
         column.setReadFunction(Person::lastName);
         column.setWriteFunction(Person::setLastName);
         column.setValidator(TableSampler::isNotBlank);
-        column.setPrefWidth(150);
         return column;
     }
 
@@ -388,7 +376,6 @@ public final class TableSampler {
         };
         column.setReadFunction(Person::notes);
         column.setWriteFunction(Person::setNotes);
-        column.setPrefWidth(320);
         return column;
     }
 
@@ -397,7 +384,6 @@ public final class TableSampler {
         column.setReadFunction(Person::salary);
         column.setWriteFunction(Person::setSalary);
         column.setValidator(TableSampler::isValidSalary);
-        column.setPrefWidth(110);
         return column;
     }
 
@@ -408,24 +394,23 @@ public final class TableSampler {
         treeTableView.setFixedColumnCount(2);
         treeTableView.setShowTreeLines(true);
 
-        treeTableView.getColumns().addAll(createTreeIdColumn(), createTreeNameColumn(), createTreeAgeColumn(), createTreeActiveColumn(), createTreeDepartmentColumn(), createTreeSalaryColumn(),
-                createTreeEmailColumn(), createTreeHireDateColumn(), createTreeNotesColumn());
+        treeTableView.getColumns()
+                .addAll(createTreeIdColumn(), createTreeNameColumn(), createTreeAgeColumn(), createTreeActiveColumn(),
+                        createTreeDepartmentColumn(), createTreeSalaryColumn(), createTreeEmailColumn(),
+                        createTreeHireDateColumn(), createTreeNotesColumn());
 
         treeTableView.getColumns().forEach(column -> column.setSortable(true));
 
-        PersonGenerator generator = new PersonGenerator();
-        IntFunction<List<TreeItem<Person>>> treeItemGenerator = count -> generator.generate(count).stream()
+        IntFunction<List<TreeItem<Person>>> treeItemGenerator = count -> GENERATOR.generate(count).stream()
                 .map(TableSampler::createTreeItem).toList();
         treeTableView.setItems(FXCollections.observableArrayList(treeItemGenerator.apply(ITEM_COUNT)));
-
-        treeTableView.getRoot().setExpanded(true);
         treeTableView.setValidationEnabled(true);
 
-        treeTableView.getHeaderButtons().addAll(new MenuButton("Options", null,
-                        createToggle("Editable", treeTableView.editableProperty()),
-                        createToggle("Validation", treeTableView.validationEnabledProperty()),
-                        createToggle("Tree lines", treeTableView.showTreeLinesProperty()),
-                        createFixedCellSizeToggle(treeTableView.fixedCellSizeProperty())),
+        MenuButton options = new MenuButton("Options", null, createToggle("Editable", treeTableView.editableProperty()),
+                createToggle("Validation", treeTableView.validationEnabledProperty()),
+                createToggle("Tree lines", treeTableView.showTreeLinesProperty()),
+                createFixedCellSizeToggle(treeTableView.fixedCellSizeProperty()));
+        treeTableView.getHeaderButtons().addAll(options,
                 createSpinner("Fixed columns", treeTableView.fixedColumnCountProperty(),
                         treeTableView.getColumns().size()),
                 createButton("Expand all", () -> setExpanded(treeTableView, true)),

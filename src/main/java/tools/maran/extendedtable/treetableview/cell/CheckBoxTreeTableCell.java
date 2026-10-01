@@ -4,8 +4,6 @@ import javafx.beans.binding.Bindings;
 import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 
-import tools.maran.extendedtable.tableview.cell.CheckBoxTableCell;
-
 /// [ExtendedTreeTableCell] which shows a [CheckBox].
 ///
 /// @param <S>
@@ -16,7 +14,7 @@ public class CheckBoxTreeTableCell<S> extends ExtendedTreeTableCell<S, Boolean> 
 
     private boolean isInUpdate;
 
-    /// Creates a new [CheckBoxTableCell] instance.
+    /// Creates a new [CheckBoxTreeTableCell] instance.
     public CheckBoxTreeTableCell() {
         setAlignment(Pos.CENTER);
     }

@@ -88,7 +88,7 @@ public abstract class AbstractFilterTreeTableColumn<S, T> extends ExtendedTreeTa
     ///
     /// @return true, when this column is filtered, false otherwise
     public boolean isFiltered() {
-        return filteredProperty().get();
+        return filteredPropertyImpl().get();
     }
 
     @Override
@@ -108,13 +108,13 @@ public abstract class AbstractFilterTreeTableColumn<S, T> extends ExtendedTreeTa
     }
 
     @Override
-    public final void setFiltered(boolean filtered) {
-        filteredPropertyImpl().set(filtered);
+    public final void setFilterPopupFactory(Supplier<FilterPopupControl<TreeItem<S>>> filterPopupFactory) {
+        this.filterPopupFactory = filterPopupFactory;
     }
 
     @Override
-    public final void setFilterPopupFactory(Supplier<FilterPopupControl<TreeItem<S>>> filterPopupFactory) {
-        this.filterPopupFactory = filterPopupFactory;
+    public final void setFiltered(boolean filtered) {
+        filteredPropertyImpl().set(filtered);
     }
 
     /// Sets whether the filtering of this column is disabled. A column with nested columns is never filterable.
@@ -167,21 +167,6 @@ public abstract class AbstractFilterTreeTableColumn<S, T> extends ExtendedTreeTa
         return toStringConverter.call(item);
     }
 
-    private FilterPopupControl<TreeItem<S>> createFilterPopupControl() {
-        FilterPopupControl<TreeItem<S>> popupControl = filterPopupFactory.get();
-        popupControl.fixedCellSizeProperty().bind(getTreeTableView().fixedCellSizeProperty());
-        popupControl.setReadFunction(item -> convertToString(readValue(item.getValue())));
-
-        popupHiddenHandler = _ -> doAction(popupControl.getStatus());
-        weakPopupHiddenHandler = new WeakEventHandler<>(popupHiddenHandler);
-
-        popupControl.setBackingItems(getBackingItems());
-        popupControl.setItems(getItems());
-        popupControl.setOnHidden(weakPopupHiddenHandler);
-
-        return popupControl;
-    }
-
     @Override
     protected void onBackingItemsChanged(ObservableList<TreeItem<S>> items) {
         if (filterPopupControl != null) {
@@ -207,14 +192,26 @@ public abstract class AbstractFilterTreeTableColumn<S, T> extends ExtendedTreeTa
         getExtendedTreeTableView().filter(this, filterPopupControl.getSelectedItems());
     }
 
+    private FilterPopupControl<TreeItem<S>> createFilterPopupControl() {
+        FilterPopupControl<TreeItem<S>> popupControl = filterPopupFactory.get();
+        popupControl.fixedCellSizeProperty().bind(getTreeTableView().fixedCellSizeProperty());
+        popupControl.setReadFunction(item -> convertToString(readValue(item.getValue())));
+
+        popupHiddenHandler = _ -> doAction(popupControl.getStatus());
+        weakPopupHiddenHandler = new WeakEventHandler<>(popupHiddenHandler);
+
+        popupControl.setBackingItems(getBackingItems());
+        popupControl.setItems(getItems());
+        popupControl.setOnHidden(weakPopupHiddenHandler);
+
+        return popupControl;
+    }
+
     private void doAction(Status status) {
         switch (status) {
             case APPLY -> applyFilter();
             case RESET_ALL -> resetFilter();
             case RESET_COLUMN -> resetColumnFilter();
-            case UNCHANGED -> {
-                // noop
-            }
         }
     }
 

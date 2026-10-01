@@ -112,8 +112,7 @@ public abstract class FilterTableTestBase extends JavaFxTest {
 
             button(filterPopup, RESET_ALL_BUTTON).fire();
 
-            assertFalse(filterPopup.isShowing(),
-                    "The filter popup should be hidden after all filters were reset");
+            assertFalse(filterPopup.isShowing(), "The filter popup should be hidden after all filters were reset");
         });
     }
 
@@ -202,9 +201,7 @@ public abstract class FilterTableTestBase extends JavaFxTest {
     static List<String> entryTexts(FilterPopupControl<?> filterPopup) {
         ListView<?> entries = nodes(filterPopup, ListView.class).getFirst();
 
-        return entries.getItems().stream()
-                .map(entry -> ((SelectableItem<?>) entry).getItemText())
-                .toList();
+        return entries.getItems().stream().map(entry -> ((SelectableItem<?>) entry).getItemText()).toList();
     }
 
     void filter(int columnIndex, List<Row> filteredRows) {
@@ -249,11 +246,8 @@ public abstract class FilterTableTestBase extends JavaFxTest {
     static String selectionText(FilterPopupControl<?> filterPopup) {
         Parent filterBox = (Parent) filterPopup.getSkin().getNode();
 
-        return filterBox.getChildrenUnmodifiable().stream()
-                .filter(Label.class::isInstance)
-                .map(node -> ((Label) node).getText())
-                .findFirst()
-                .orElseThrow();
+        return filterBox.getChildrenUnmodifiable().stream().filter(Label.class::isInstance)
+                .map(node -> ((Label) node).getText()).findFirst().orElseThrow();
     }
 
     void setBackingRows(List<Row> backingRows) {

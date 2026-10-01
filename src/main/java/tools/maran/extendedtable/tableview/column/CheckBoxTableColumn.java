@@ -13,10 +13,10 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
 
+import tools.maran.extendedtable.table.common.TableI18N;
 import tools.maran.extendedtable.tableview.ExtendedTableView;
 import tools.maran.extendedtable.tableview.cell.CheckBoxTableCell;
 import tools.maran.extendedtable.tableview.cell.ExtendedTableCell;
-import tools.maran.extendedtable.table.common.TableI18N;
 
 /// Implementation of a [GenericTableColumn] with a [CheckBox] in the header that supports only [Boolean].
 /// Null is considered an empty not changeable value.
@@ -116,29 +116,6 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
         decideCheckBoxState(newValue);
     }
 
-    /// Faster method than [#decideCheckBoxState()] as we already have a hint of what we need to check.
-    ///
-    /// @param isSelected
-    ///         the selected flag
-    private void decideCheckBoxState(Boolean isSelected) {
-        if (!isCheckBoxUsed()) {
-            return;
-        }
-
-        if (isSelected == null) {
-            // We need to call the expensive method as the state is more complex.
-            decideCheckBoxState();
-            return;
-        }
-
-        Boolean opposite = !isSelected;
-        boolean mixed = getItems().stream().anyMatch(item -> opposite.equals(readValue(item)));
-        checkBox.setIndeterminate(mixed);
-        if (!mixed) {
-            checkBox.setSelected(isSelected);
-        }
-    }
-
     private void decideCheckBoxState() {
         if (!isCheckBoxUsed()) {
             return;
@@ -177,6 +154,29 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
         allSelectableProperty.set(true);
         checkBox.setIndeterminate(false);
         checkBox.setSelected(selectedFound);
+    }
+
+    /// Faster method than [#decideCheckBoxState()] as we already have a hint of what we need to check.
+    ///
+    /// @param isSelected
+    ///         the selected flag
+    private void decideCheckBoxState(Boolean isSelected) {
+        if (!isCheckBoxUsed()) {
+            return;
+        }
+
+        if (isSelected == null) {
+            // We need to call the expensive method as the state is more complex.
+            decideCheckBoxState();
+            return;
+        }
+
+        Boolean opposite = !isSelected;
+        boolean mixed = getItems().stream().anyMatch(item -> opposite.equals(readValue(item)));
+        checkBox.setIndeterminate(mixed);
+        if (!mixed) {
+            checkBox.setSelected(isSelected);
+        }
     }
 
     private boolean isCheckBoxUsed() {

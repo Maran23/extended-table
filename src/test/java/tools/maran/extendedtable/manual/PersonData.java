@@ -10,18 +10,18 @@ import tools.maran.extendedtable.manual.Person.Department;
 /// @author Marius Hanl
 public final class PersonData {
 
-    private static final String[] FIRST_NAMES = {"Anna", "Ben", "Clara", "David", "Emma", "Felix", "Greta", "Hannes",
-            "Ida", "Jonas", "Katharina", "Lukas", "Marie", "Noah", "Olivia", "Paul", "Quinn", "Rosa", "Simon", "Theo"};
+    private static final String[] FIRST_NAMES = { "Anna", "Ben", "Clara", "David", "Emma", "Felix", "Greta", "Hannes",
+            "Ida", "Jonas", "Katharina", "Lukas", "Marie", "Noah", "Olivia", "Paul", "Quinn", "Rosa", "Simon", "Theo" };
 
-    private static final String[] LAST_NAMES = {"Bauer", "Becker", "Fischer", "Hoffmann", "Kaiser", "Klein", "Koch",
+    private static final String[] LAST_NAMES = { "Bauer", "Becker", "Fischer", "Hoffmann", "Kaiser", "Klein", "Koch",
             "König", "Krause", "Lehmann", "Meyer", "Müller", "Neumann", "Richter", "Schmidt", "Schneider", "Schulz",
-            "Wagner", "Weber", "Zimmermann"};
+            "Wagner", "Weber", "Zimmermann" };
 
-    private static final String[] NOTES = {"", "Works from the office.", "Prefers remote work.",
+    private static final String[] NOTES = { "", "Works from the office.", "Prefers remote work.",
             "On parental leave until the end of the year.", "Mentors two of the new colleagues.",
             "Team lead.\nResponsible for the release planning.",
             "Joined from the support team.\nStill helps out on busy days.\nSpeaks four languages.",
-            "No notes available."};
+            "No notes available." };
 
     private static final LocalDate FIRST_HIRE_DATE = LocalDate.of(2000, 1, 1);
     private static final int HIRE_DATE_RANGE_DAYS = 9_400;

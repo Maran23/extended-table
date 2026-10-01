@@ -17,9 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import tools.maran.extendedtable.filter.FilterTableTestBase;
 import tools.maran.extendedtable.data.Row;
 import tools.maran.extendedtable.data.TableType;
+import tools.maran.extendedtable.filter.FilterTableTestBase;
 
 /// Tests the filterable columns of every table with random sequences of actions.
 ///
@@ -44,25 +44,16 @@ class TableRandomTest extends FilterTableTestBase {
         }
     }
 
-    /// Shows a new table and asserts after every random filter action that the expected rows are shown.
-    private void randomSequenceOfFilterActions(TableType tableType, int run) {
-        List<Row> backingRows = randomizableRows();
-        showTable(tableType, backingRows);
+    static String value(Row row, int columnIndex) {
+        return switch (columnIndex) {
+            case COLUMN_1 -> row.first();
+            case COLUMN_2 -> row.second();
+            default -> row.third();
+        };
+    }
 
-        Map<Integer, Set<Row>> filteredOutRows = new HashMap<>();
-        List<String> actions = new ArrayList<>();
-
-        for (int step = 0; step < 10; step++) {
-            assertDoesNotThrow(() -> performRandomAction(backingRows, filteredOutRows, actions),
-                    () -> "seed: " + seed + ", run: " + run + ", actions: " + actions);
-
-            String message = "seed: " + seed + ", run: " + run + ", actions: " + actions;
-            assertEquals(rowsNotFilteredOut(backingRows, filteredOutRows), getVisibleRows(), message);
-            assertEquals(backingRows, getBackingRows(), message);
-            assertEquals(!filteredOutRows.isEmpty(), isFiltered(), message);
-        }
-
-        closeStage();
+    private List<String> distinctValues(List<Row> rows, int columnIndex) {
+        return rows.stream().map(row -> value(row, columnIndex)).distinct().toList();
     }
 
     /// Performs a random filter action on the table, updates the expected rows and records it inside the actions.
@@ -148,16 +139,47 @@ class TableRandomTest extends FilterTableTestBase {
                 Set<String> selection = randomSelection(selectableValues);
 
                 actions.add("apply(" + columnIndex + ", " + selection + ")");
-                filteredOutRows.put(columnIndex,
-                        rowsNotMatchingSelection(backingRows, columnIndex, selection));
+                filteredOutRows.put(columnIndex, rowsNotMatchingSelection(backingRows, columnIndex, selection));
 
                 applyFilter(columnIndex, selection);
             }
         }
     }
 
-    /// Returns rows with three different values in every column, so every column can be narrowed down multiple times.
-    static List<Row> randomizableRows() {
+    private Row randomRow() {
+        return new Row(String.valueOf("ABC".charAt(random.nextInt(3))), String.valueOf(1 + random.nextInt(3)),
+                String.valueOf("XYZ".charAt(random.nextInt(3))));
+    }
+
+    private Set<String> randomSelection(List<String> values) {
+        List<String> shuffled = new ArrayList<>(values);
+        Collections.shuffle(shuffled, random);
+
+        return new LinkedHashSet<>(shuffled.subList(0, 1 + random.nextInt(values.size() - 1)));
+    }
+
+    /// Shows a new table and asserts after every random filter action that the expected rows are shown.
+    private void randomSequenceOfFilterActions(TableType tableType, int run) {
+        List<Row> backingRows = randomizableRows();
+        showTable(tableType, backingRows);
+
+        Map<Integer, Set<Row>> filteredOutRows = new HashMap<>();
+        List<String> actions = new ArrayList<>();
+
+        for (int step = 0; step < 10; step++) {
+            assertDoesNotThrow(() -> performRandomAction(backingRows, filteredOutRows, actions),
+                    () -> "seed: " + seed + ", run: " + run + ", actions: " + actions);
+
+            String message = "seed: " + seed + ", run: " + run + ", actions: " + actions;
+            assertEquals(rowsNotFilteredOut(backingRows, filteredOutRows), getVisibleRows(), message);
+            assertEquals(backingRows, getBackingRows(), message);
+            assertEquals(!filteredOutRows.isEmpty(), isFiltered(), message);
+        }
+
+        closeStage();
+    }
+
+    private List<Row> randomizableRows() {
         List<Row> rows = new ArrayList<>();
         for (int first = 0; first < 3; first++) {
             for (int second = 0; second < 3; second++) {
@@ -168,40 +190,12 @@ class TableRandomTest extends FilterTableTestBase {
         return rows;
     }
 
-    /// Returns a new row with random values out of the values of [#randomizableRows()].
-    Row randomRow() {
-        return new Row(String.valueOf("ABC".charAt(random.nextInt(3))), String.valueOf(1 + random.nextInt(3)),
-                String.valueOf("XYZ".charAt(random.nextInt(3))));
-    }
-
-    /// Returns a non empty, strict subset of the given values, so the selection can be applied.
-    Set<String> randomSelection(List<String> values) {
-        List<String> shuffled = new ArrayList<>(values);
-        Collections.shuffle(shuffled, random);
-
-        return new LinkedHashSet<>(shuffled.subList(0, 1 + random.nextInt(values.size() - 1)));
-    }
-
-    /// Returns the distinct values of the given rows in the column, that is the entries of its filter popup.
-    static List<String> distinctValues(List<Row> rows, int columnIndex) {
-        return rows.stream().map(row -> value(row, columnIndex)).distinct().toList();
-    }
-
-    static List<Row> rowsNotFilteredOut(List<Row> backingRows, Map<Integer, Set<Row>> filteredOutRows) {
+    private List<Row> rowsNotFilteredOut(List<Row> backingRows, Map<Integer, Set<Row>> filteredOutRows) {
         return backingRows.stream()
-                .filter(row -> filteredOutRows.values().stream().noneMatch(rows -> rows.contains(row)))
-                .toList();
+                .filter(row -> filteredOutRows.values().stream().noneMatch(rows -> rows.contains(row))).toList();
     }
 
-    static Set<Row> rowsNotMatchingSelection(List<Row> backingRows, int columnIndex, Set<String> selection) {
+    private Set<Row> rowsNotMatchingSelection(List<Row> backingRows, int columnIndex, Set<String> selection) {
         return new HashSet<>(backingRows.stream().filter(row -> !selection.contains(value(row, columnIndex))).toList());
-    }
-
-    static String value(Row row, int columnIndex) {
-        return switch (columnIndex) {
-            case COLUMN_1 -> row.first();
-            case COLUMN_2 -> row.second();
-            default -> row.third();
-        };
     }
 }

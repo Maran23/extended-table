@@ -23,9 +23,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import tools.maran.extendedtable.JavaFxTest;
 import tools.maran.extendedtable.data.TableType;
+import tools.maran.extendedtable.data.TableType.ItemTable;
 import tools.maran.extendedtable.filter.KeyColumn;
 import tools.maran.extendedtable.filter.TableFilter;
-import tools.maran.extendedtable.data.TableType.ItemTable;
 import tools.maran.extendedtable.table.common.ExtendedTable;
 
 /// Tests [TableFilter] of every table with random changes of many items, so the bits span over multiple words.
@@ -51,33 +51,6 @@ class TableFilterRandomTest extends JavaFxTest {
                 randomChangesOfTheBackingItems(tableType.createItemTable(), run);
             }
         });
-    }
-
-    /// Filters the table and asserts after every random change of its backing items that the same items are
-    /// filtered out.
-    private <T> void randomChangesOfTheBackingItems(ItemTable<T> itemTable, int run) {
-        ExtendedTable<T> table = itemTable.table();
-        Supplier<T> newItem = itemTable.newItemFactory();
-        table.setItems(FXCollections.observableArrayList(newItems(newItem, 300)));
-        ObservableList<T> backingItems = table.getBackingItems();
-
-        List<T> filteredItems = backingItems.stream().filter(_ -> random.nextInt(3) == 0).toList();
-        table.filter(new KeyColumn<>(), filteredItems);
-
-        Set<T> filteredOutItems = Collections.newSetFromMap(new IdentityHashMap<>());
-        backingItems.stream().filter(item -> !filteredItems.contains(item)).forEach(filteredOutItems::add);
-
-        List<String> actions = new ArrayList<>();
-        for (int step = 0; step < 30; step++) {
-            assertDoesNotThrow(() -> changeRandomly(backingItems, newItem, actions),
-                    () -> "seed " + seed + ", run " + run + ", actions " + actions);
-
-            List<T> expectedItems = backingItems.stream()
-                    .filter(item -> !filteredOutItems.contains(item))
-                    .toList();
-            String message = "seed " + seed + ", run " + run + ", actions " + actions;
-            assertEquals(expectedItems, table.getItems(), message);
-        }
     }
 
     /// Applies a random change to the backing items and records it inside the actions.
@@ -122,5 +95,30 @@ class TableFilterRandomTest extends JavaFxTest {
 
     private static <T> List<T> newItems(Supplier<T> newItem, int count) {
         return Stream.generate(newItem).limit(count).toList();
+    }
+
+    /// Filters the table and asserts after every random change of its backing items that the same items are
+    /// filtered out.
+    private <T> void randomChangesOfTheBackingItems(ItemTable<T> itemTable, int run) {
+        ExtendedTable<T> table = itemTable.table();
+        Supplier<T> newItem = itemTable.newItemFactory();
+        table.setItems(FXCollections.observableArrayList(newItems(newItem, 300)));
+        ObservableList<T> backingItems = table.getBackingItems();
+
+        List<T> filteredItems = backingItems.stream().filter(_ -> random.nextInt(3) == 0).toList();
+        table.filter(new KeyColumn<>(), filteredItems);
+
+        Set<T> filteredOutItems = Collections.newSetFromMap(new IdentityHashMap<>());
+        backingItems.stream().filter(item -> !filteredItems.contains(item)).forEach(filteredOutItems::add);
+
+        List<String> actions = new ArrayList<>();
+        for (int step = 0; step < 30; step++) {
+            String message = "seed " + seed + ", run " + run + ", actions " + actions;
+
+            assertDoesNotThrow(() -> changeRandomly(backingItems, newItem, actions), message);
+
+            List<T> expectedItems = backingItems.stream().filter(item -> !filteredOutItems.contains(item)).toList();
+            assertEquals(expectedItems, table.getItems(), message);
+        }
     }
 }

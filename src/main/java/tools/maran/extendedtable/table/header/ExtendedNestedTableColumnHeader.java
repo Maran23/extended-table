@@ -61,8 +61,9 @@ public class ExtendedNestedTableColumnHeader extends NestedTableColumnHeader {
         // There is no other way to access that.
         Region columnHeader = (Region) getChildren().getFirst();
         Region label = (Region) columnHeader.getChildrenUnmodifiable().getFirst();
-        double headerWidth = columnHeader.snapSpaceX(columnHeader.snappedLeftInset() + columnHeader.snappedRightInset()
-                + columnHeader.snapSizeX(label.prefWidth(-1)) + columnHeader.snapSpaceX(4));
+        double colInsets = columnHeader.snappedLeftInset() + columnHeader.snappedRightInset();
+        double colWidth = columnHeader.snapSizeX(label.prefWidth(-1));
+        double headerWidth = columnHeader.snapSpaceX(colInsets + colWidth + columnHeader.snapSpaceX(4));
 
         if (nestedPrefWidth >= headerWidth) {
             // When the nested pref width is bigger than us, we don't need to do anything at all,

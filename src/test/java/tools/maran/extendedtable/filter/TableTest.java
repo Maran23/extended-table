@@ -816,7 +816,7 @@ class TableTest extends FilterTableTestBase {
     @DisplayName("Resetting a narrowed down filter keeps the remaining filters")
     @ParameterizedTest
     @EnumSource(TableType.class)
-    void testResettingTheFilterOfAColumnWhichWasNarrowedDownShowsTheRowsMatchingTheRemainingFilters(TableType tableType) {
+    void testResettingAFilterWhichWasNarrowedDownShowsTheRowsMatchingTheRemainingFilters(TableType tableType) {
         showTable(tableType, narrowableRows);
 
         applyFilter(COLUMN_1, "A");
