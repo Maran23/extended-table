@@ -41,6 +41,8 @@ public interface FilterableColumn<S> {
     ///
     /// @param filterPopupFactory
     ///         the filter popup factory
+    /// @implNote The default factory just creates a [FilterPopupControl]
+    /// and binds its [FilterPopupControl#fixedCellSizeProperty()] to the fixed cell size of the table.
     void setFilterPopupFactory(Supplier<FilterPopupControl<S>> filterPopupFactory);
 
     /// Sets whether this column is currently filtered or not. Called by the table, which keeps track of the filters.

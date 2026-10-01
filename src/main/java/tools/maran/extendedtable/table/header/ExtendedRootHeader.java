@@ -39,13 +39,7 @@ public class ExtendedRootHeader extends ExtendedNestedTableColumnHeader {
 
     @Override
     public void resizeColumnToFitContent() {
-        for (TableColumnHeader columnHeader : getColumnHeaders()) {
-            if (columnHeader instanceof ExtendedTableColumnHeader extendedHeader) {
-                extendedHeader.resizeColumnToFitContent();
-            } else if (columnHeader instanceof ExtendedNestedTableColumnHeader extendedNestedHeader) {
-                extendedNestedHeader.resizeColumnToFitContent();
-            }
-        }
+        resizeChildColumnsToFitContent();
     }
 
     @Override

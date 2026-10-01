@@ -9,6 +9,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.skin.TableColumnHeader;
 import javafx.stage.Stage;
 
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +33,27 @@ class ColumnAutosizeTest extends JavaFxTest {
     @AfterEach
     void closeStage() {
         runOnFxThread(stage::close);
+    }
+
+    @DisplayName("Autosizing a nested column lays out its leaf headers without pixel gaps")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testAutosizeLaysOutLeafHeadersWithoutGaps(TableType tableType) {
+        runOnFxThread(() -> {
+            TableColumnBase<?, ?> firstColumn = tableType.createColumn("F", "V");
+            TableColumnBase<?, ?> secondColumn = tableType.createColumn("S", "V");
+            TableColumnBase<?, ?> nestedColumn = tableType.createNestedColumn(LONG_VALUE, firstColumn, secondColumn);
+
+            Control table = tableType.createTable(List.of(nestedColumn));
+            show(table);
+
+            tableType.autosizeColumns(table);
+            table.layout();
+
+            TableColumnHeader firstHeader = getHeader(table, firstColumn);
+            TableColumnHeader secondHeader = getHeader(table, secondColumn);
+            assertEquals(firstHeader.getLayoutX() + firstHeader.getWidth(), secondHeader.getLayoutX());
+        });
     }
 
     @DisplayName("Autosizing resizes a column to fit its content")
@@ -130,19 +152,31 @@ class ColumnAutosizeTest extends JavaFxTest {
     @EnumSource(TableType.class)
     void testNestedColumnIsAutosizedOnShow(TableType tableType) {
         runOnFxThread(() -> {
-            TableColumnBase<?, ?> leafColumn = tableType.createColumn("L", "V");
-            TableColumnBase<?, ?> nestedColumn = tableType.createNestedColumn(LONG_VALUE, leafColumn);
+            TableColumnBase<?, ?> firstColumn = tableType.createColumn("F", "V");
+            TableColumnBase<?, ?> secondColumn = tableType.createColumn("S", "V");
+            TableColumnBase<?, ?> nestedColumn = tableType.createNestedColumn(LONG_VALUE, firstColumn, secondColumn);
 
-            show(tableType.createTable(List.of(nestedColumn)));
+            Control table = tableType.createTable(List.of(nestedColumn));
+            show(table);
 
-            // The nested column width is only synced on the next layout pass, so we check the leaf column.
-            assertWiderThan(DEFAULT_COLUMN_WIDTH, leafColumn);
+            // The nested column width is only synced on the next layout pass, so we check the leaf headers.
+            TableColumnHeader firstHeader = getHeader(table, firstColumn);
+            TableColumnHeader secondHeader = getHeader(table, secondColumn);
+            double leafHeadersWidth = firstHeader.getWidth() + secondHeader.getWidth();
+            assertTrue(leafHeadersWidth > 2 * DEFAULT_COLUMN_WIDTH, "Leaf headers width was " + leafHeadersWidth);
+            assertEquals(firstHeader.getLayoutX() + firstHeader.getWidth(), secondHeader.getLayoutX());
         });
     }
 
     private static void assertWiderThan(double expectedMinWidth, TableColumnBase<?, ?> column) {
         assertTrue(column.getWidth() > expectedMinWidth,
                 "Column width " + column.getWidth() + " is not wider than " + expectedMinWidth);
+    }
+
+    private TableColumnHeader getHeader(Control table, TableColumnBase<?, ?> column) {
+        return table.lookupAll(".column-header").stream().filter(TableColumnHeader.class::isInstance)
+                .map(TableColumnHeader.class::cast).filter(header -> header.getTableColumn() == column).findFirst()
+                .orElseThrow();
     }
 
     private void show(Control table) {

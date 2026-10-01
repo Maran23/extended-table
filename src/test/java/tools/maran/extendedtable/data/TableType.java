@@ -66,9 +66,9 @@ public enum TableType {
         }
 
         @Override
-        public TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?> child) {
+        public TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?>... children) {
             TableColumn<Row, ?> column = new TableColumn<>(text);
-            column.getColumns().add((TableColumn) child);
+            column.getColumns().addAll((List) List.of(children));
             return column;
         }
 
@@ -124,9 +124,9 @@ public enum TableType {
         }
 
         @Override
-        public TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?> child) {
+        public TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?>... children) {
             TreeTableColumn<Row, ?> column = new TreeTableColumn<>(text);
-            column.getColumns().add((TreeTableColumn) child);
+            column.getColumns().addAll((List) List.of(children));
             return column;
         }
 
@@ -181,8 +181,8 @@ public enum TableType {
 
     public abstract ItemTable<?> createItemTable();
 
-    /// Creates a column which contains the given child column.
-    public abstract TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?> child);
+    /// Creates a column which contains the given child columns.
+    public abstract TableColumnBase<?, ?> createNestedColumn(String text, TableColumnBase<?, ?>... children);
 
     /// Creates a table with the given columns and rows.
     public abstract Control createTable(List<TableColumnBase<?, ?>> columns, List<Row> rows);

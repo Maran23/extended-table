@@ -1,7 +1,5 @@
 package tools.maran.extendedtable.table.header;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
@@ -18,8 +16,7 @@ import javafx.scene.layout.Region;
 /// @author Marius Hanl
 public class ExtendedNestedTableColumnHeader extends NestedTableColumnHeader {
 
-    private final InvalidationListener sceneListener = _ -> doAutosize();
-    private final WeakInvalidationListener weakSceneListener = new WeakInvalidationListener(sceneListener);
+    private boolean isTitleFitted;
 
     /// Creates a new [ExtendedNestedTableColumnHeader] instance.
     ///
@@ -27,8 +24,6 @@ public class ExtendedNestedTableColumnHeader extends NestedTableColumnHeader {
     ///         the [TableColumnBase]
     public ExtendedNestedTableColumnHeader(TableColumnBase<?, ?> tableColumnBase) {
         super(tableColumnBase);
-
-        sceneProperty().addListener(weakSceneListener);
     }
 
     /// Resizes this `NestedTableColumnHeader`'s column to fit the width of its title.
@@ -44,17 +39,49 @@ public class ExtendedNestedTableColumnHeader extends NestedTableColumnHeader {
             return;
         }
 
-        // Resize all children columns first.
-        for (TableColumnHeader columnHeader : getColumnHeaders()) {
-            if (columnHeader instanceof ExtendedTableColumnHeader tableColumnHeader) {
-                tableColumnHeader.resizeColumnToFitContent();
-            }
+        resizeChildColumnsToFitContent();
+        resizeColumnToFitTitle();
+    }
+
+    @Override
+    @SuppressWarnings("rawtypes")
+    protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {
+        return col == null || col.getColumns().isEmpty() || col == getTableColumn() ? new ExtendedTableColumnHeader(col)
+                : new ExtendedNestedTableColumnHeader(col);
+    }
+
+    @Override
+    protected void layoutChildren() {
+        // JavaFX only autosizes columns which still have the default width, which a nested column with multiple
+        // children never has. So we fit the title once, as soon as the header is laid out.
+        if (!isTitleFitted && getTableColumn() != null && getTableColumn().isResizable()) {
+            isTitleFitted = true;
+            resizeColumnToFitTitle();
         }
 
+        super.layoutChildren();
+    }
+
+    /// Resizes all children columns, including nested ones, to fit their content.
+    protected final void resizeChildColumnsToFitContent() {
+        for (TableColumnHeader columnHeader : getColumnHeaders()) {
+            if (columnHeader instanceof ExtendedTableColumnHeader extendedHeader) {
+                extendedHeader.resizeColumnToFitContent();
+            } else if (columnHeader instanceof ExtendedNestedTableColumnHeader extendedNestedHeader) {
+                extendedNestedHeader.resizeColumnToFitContent();
+            }
+        }
+    }
+
+    @Override
+    protected void resizeColumnToFitContent(int maxRows) {
+        resizeColumnToFitContent();
+    }
+
+    private void resizeColumnToFitTitle() {
         // Apply css so that everything is ready in the header.
         applyCss();
 
-        // We now retrieve the nested header width we got from triggering the calculation above.
         double nestedPrefWidth = snapSpaceX(prefWidth(getHeight()));
 
         // The first entry is the TableColumnHeader, and from there the first entry is the Label.
@@ -66,8 +93,7 @@ public class ExtendedNestedTableColumnHeader extends NestedTableColumnHeader {
         double headerWidth = columnHeader.snapSpaceX(colInsets + colWidth + columnHeader.snapSpaceX(4));
 
         if (nestedPrefWidth >= headerWidth) {
-            // When the nested pref width is bigger than us, we don't need to do anything at all,
-            // as we resized them already above.
+            // The nested columns are already wide enough for our title.
             return;
         }
 
@@ -81,30 +107,10 @@ public class ExtendedNestedTableColumnHeader extends NestedTableColumnHeader {
             treeTableView.resizeColumn((TreeTableColumn) getTableColumn(), delta);
         }
 
-        // Since we resize the column, we need to trigger a relayout of the nested headers.
+        // Lay out the nested headers right away, otherwise they keep their unsnapped widths and leave pixel gaps.
         for (TableColumnHeader header : getColumnHeaders()) {
             header.requestLayout();
             header.layout();
-        }
-    }
-
-    @Override
-    @SuppressWarnings("rawtypes")
-    protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {
-        return col == null || col.getColumns().isEmpty() || col == getTableColumn() ? new ExtendedTableColumnHeader(col)
-                : new ExtendedNestedTableColumnHeader(col);
-    }
-
-    @Override
-    protected void resizeColumnToFitContent(int maxRows) {
-        resizeColumnToFitContent();
-    }
-
-    private void doAutosize() {
-        if (getScene() != null) {
-            sceneProperty().removeListener(weakSceneListener);
-
-            resizeColumnToFitContent();
         }
     }
 

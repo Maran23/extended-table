@@ -8,6 +8,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.WeakEventHandler;
+import javafx.scene.control.TableView;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
@@ -44,7 +45,7 @@ public abstract class AbstractFilterTableColumn<S, T> extends ExtendedTableColum
     private Callback<T, String> toStringConverter;
     private Callback<String, T> fromStringConverter;
 
-    private Supplier<FilterPopupControl<S>> filterPopupFactory = FilterPopupControl::new;
+    private Supplier<FilterPopupControl<S>> filterPopupFactory = this::createDefaultFilterPopupControl;
 
     /// Creates a new [AbstractFilterTableColumn] instance.
     protected AbstractFilterTableColumn() {
@@ -191,9 +192,24 @@ public abstract class AbstractFilterTableColumn<S, T> extends ExtendedTableColum
         getExtendedTableView().filter(this, filterPopupControl.getSelectedItems());
     }
 
+    private FilterPopupControl<S> createDefaultFilterPopupControl() {
+        FilterPopupControl<S> filter = new FilterPopupControl<>();
+        TableView<S> tableView = getTableView();
+        if (tableView != null) {
+            filter.fixedCellSizeProperty().bind(tableView.fixedCellSizeProperty());
+        }
+        return filter;
+    }
+
     private FilterPopupControl<S> createFilterPopupControl() {
+        if (filterPopupFactory == null) {
+            return null;
+        }
         FilterPopupControl<S> popupControl = filterPopupFactory.get();
-        popupControl.fixedCellSizeProperty().bind(getTableView().fixedCellSizeProperty());
+        if (popupControl == null) {
+            return null;
+        }
+
         popupControl.setReadFunction(item -> convertToString(readValue(item)));
 
         popupHiddenHandler = _ -> doAction(popupControl.getStatus());

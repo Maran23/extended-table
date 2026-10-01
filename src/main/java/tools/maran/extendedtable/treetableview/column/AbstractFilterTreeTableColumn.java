@@ -9,6 +9,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.WeakEventHandler;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableView;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
@@ -45,7 +46,7 @@ public abstract class AbstractFilterTreeTableColumn<S, T> extends ExtendedTreeTa
     private Callback<T, String> toStringConverter;
     private Callback<String, T> fromStringConverter;
 
-    private Supplier<FilterPopupControl<TreeItem<S>>> filterPopupFactory = FilterPopupControl::new;
+    private Supplier<FilterPopupControl<TreeItem<S>>> filterPopupFactory = this::createDefaultFilterPopupControl;
 
     /// Creates a new [AbstractFilterTreeTableColumn] instance.
     protected AbstractFilterTreeTableColumn() {
@@ -192,9 +193,24 @@ public abstract class AbstractFilterTreeTableColumn<S, T> extends ExtendedTreeTa
         getExtendedTreeTableView().filter(this, filterPopupControl.getSelectedItems());
     }
 
+    private FilterPopupControl<TreeItem<S>> createDefaultFilterPopupControl() {
+        FilterPopupControl<TreeItem<S>> filter = new FilterPopupControl<>();
+        TreeTableView<S> treeTableView = getTreeTableView();
+        if (treeTableView != null) {
+            filter.fixedCellSizeProperty().bind(treeTableView.fixedCellSizeProperty());
+        }
+        return filter;
+    }
+
     private FilterPopupControl<TreeItem<S>> createFilterPopupControl() {
+        if (filterPopupFactory == null) {
+            return null;
+        }
         FilterPopupControl<TreeItem<S>> popupControl = filterPopupFactory.get();
-        popupControl.fixedCellSizeProperty().bind(getTreeTableView().fixedCellSizeProperty());
+        if (popupControl == null) {
+            return null;
+        }
+
         popupControl.setReadFunction(item -> convertToString(readValue(item.getValue())));
 
         popupHiddenHandler = _ -> doAction(popupControl.getStatus());
