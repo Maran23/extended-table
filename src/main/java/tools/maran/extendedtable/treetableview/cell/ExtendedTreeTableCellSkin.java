@@ -1,8 +1,6 @@
 package tools.maran.extendedtable.treetableview.cell;
 
 import javafx.css.PseudoClass;
-import javafx.event.EventHandler;
-import javafx.event.WeakEventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
@@ -11,8 +9,6 @@ import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 
 /// [TreeTableCellSkin] for the [ExtendedTreeTableCell].
 ///
@@ -26,9 +22,6 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
     private static final String INDENTATION = "indentation";
 
     private static final PseudoClass PSEUDO_CLASS_EDITABLE = PseudoClass.getPseudoClass("editable");
-
-    private final EventHandler<MouseEvent> mouseClickHandler = this::handleClicks;
-    private final WeakEventHandler<MouseEvent> weakMouseClickHandler = new WeakEventHandler<>(mouseClickHandler);
 
     private ExtendedTreeTableCell<S, T> treeTableCell;
 
@@ -46,17 +39,12 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
         registerChangeListener(treeTableCell.getTreeTableView().editableProperty(), _ -> updateEditablePseudoClass());
 
         updateEditablePseudoClass();
-
-        this.treeTableCell.addEventFilter(MouseEvent.MOUSE_PRESSED, weakMouseClickHandler);
     }
 
     @Override
     public void dispose() {
         super.dispose();
 
-        if (treeTableCell != null) {
-            treeTableCell.removeEventFilter(MouseEvent.MOUSE_PRESSED, weakMouseClickHandler);
-        }
         treeTableCell = null;
     }
 
@@ -149,35 +137,6 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
             tableColumn.getProperties().put(INDENTATION, tableColIndent);
         }
         return tableColIndent;
-    }
-
-    private void handleClicks(MouseEvent event) {
-        if (isDisclosureNode(event)) {
-            return;
-        }
-
-        MouseButton button = event.getButton();
-        int clickCount = event.getClickCount();
-        if (button == MouseButton.PRIMARY && clickCount % 2 == 0) {
-            // We don't want the cell to expand/collapse if the user double click this cell. Therefore, we consume this
-            // event and send a normal edit event instead.
-            event.consume();
-
-            getSkinnable().getTreeTableView().edit(getSkinnable().getIndex(), getSkinnable().getTableColumn());
-        }
-    }
-
-    private boolean isDisclosureNode(MouseEvent event) {
-        double startX = 0;
-        for (TreeTableColumn<S, ?> col : getSkinnable().getTreeTableView().getVisibleLeafColumns()) {
-            if (col == getSkinnable().getTableColumn()) {
-                break;
-            }
-            startX += col.getWidth();
-        }
-
-        double endX = getSkinnable().getTableRow().getDisclosureNode().getBoundsInParent().getMaxX();
-        return event.getX() < (endX - startX);
     }
 
     private void updateEditablePseudoClass() {

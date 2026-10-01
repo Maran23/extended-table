@@ -2,10 +2,13 @@ package tools.maran.extendedtable.treetableview.cell;
 
 import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TreeTableCell;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 
 import tools.maran.extendedtable.treetableview.ExtendedTreeTableView;
 
@@ -26,6 +29,10 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
     public ExtendedTreeTableCell() {
         // Override the cell alignment as otherwise JavaFX is doing it in the layout of a table row for whatever reason.
         setAlignment(Pos.CENTER_LEFT);
+
+        // We don't want the cell to expand/collapse if the user double click this cell when editable.
+        // Therefore, we may consume this event and send a normal edit event instead.
+        addEventHandler(MouseEvent.MOUSE_PRESSED, this::onMousePressed);
     }
 
     @Override
@@ -152,9 +159,40 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
         return getScene() != null ? getScene().getFocusOwner() : null;
     }
 
+    private boolean isDisclosureNode(MouseEvent event) {
+        Node disclosureNode = getTableRow().getDisclosureNode();
+        if (disclosureNode == null || !disclosureNode.isVisible()) {
+            return false;
+        }
+
+        Bounds disclosureBounds = disclosureNode.getBoundsInParent();
+        Bounds cellBounds = getBoundsInParent();
+        return cellBounds.intersects(disclosureBounds)
+                && cellBounds.getMinX() + event.getX() < disclosureBounds.getMaxX();
+    }
+
     private boolean isEverythingEditable() {
         return isEditable() && getTableColumn().isEditable() && getTableRow().isEditable()
                 && getTreeTableView().isEditable();
+    }
+
+    private void onMousePressed(MouseEvent event) {
+        if (!isEverythingEditable()) {
+            return;
+        }
+
+        if (event.getButton() != MouseButton.PRIMARY || event.getClickCount() % 2 != 0) {
+            return;
+        }
+
+        if (isDisclosureNode(event)) {
+            return;
+        }
+
+        getTreeTableView().edit(getIndex(), getTableColumn());
+        if (isEditing()) {
+            event.consume();
+        }
     }
 
     private void requestFocusBackToTable(Node focusOwner) {
