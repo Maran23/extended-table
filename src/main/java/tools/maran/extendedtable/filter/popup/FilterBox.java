@@ -6,6 +6,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -42,13 +43,16 @@ class FilterBox<T> extends VBox {
         selectionIndicatorLbl = new Label();
 
         applyBtn = new Button(TableI18N.message("apply"));
+        applyBtn.setTooltip(new Tooltip(TableI18N.message("apply.desc")));
         applyBtn.setMaxWidth(Double.MAX_VALUE);
 
         colResetBtn = new Button(TableI18N.message("reset.column"));
+        colResetBtn.setTooltip(new Tooltip(TableI18N.message("reset.column.desc")));
         colResetBtn.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(colResetBtn, Priority.ALWAYS);
 
         resetBtn = new Button(TableI18N.message("reset.column.all"));
+        resetBtn.setTooltip(new Tooltip(TableI18N.message("reset.column.all.desc")));
         resetBtn.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(resetBtn, Priority.ALWAYS);
 

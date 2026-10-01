@@ -2,7 +2,6 @@
 .filter-popup > .filter-box {
     -fx-spacing: 0.333333em;
     -fx-padding: 0.333333em;
-    -fx-pref-width: 33.333333em;
     /* Copied from combo-box popup. */
     -fx-background-color:
         linear-gradient(to bottom,
@@ -14,12 +13,13 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0.0, 0, 8);
 }
 
-.filter-box > .header,
-.filter-box > .footer,
-.filter-box > .footer > .reset-buttons {
-    -fx-spacing: 0.333333em;
+.filter-popup > .filter-box > .list-view {
+    -fx-pref-width: 33.333333em;
+    -fx-pref-height: 20em;
 }
 
-.filter-box > .list-view {
-    -fx-pref-height: 20em;
+.filter-popup > .filter-box > .header,
+.filter-popup > .filter-box > .footer,
+.filter-popup > .filter-box > .footer > .reset-buttons {
+    -fx-spacing: 0.333333em;
 }

@@ -226,6 +226,12 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
 
     private void initFilterBox() {
         filterBox = new FilterBox<>();
+        filterBox.minWidthProperty().bind(filterPopupControl.minWidthProperty());
+        filterBox.prefWidthProperty().bind(filterPopupControl.prefWidthProperty());
+        filterBox.maxWidthProperty().bind(filterPopupControl.maxWidthProperty());
+        filterBox.minHeightProperty().bind(filterPopupControl.minHeightProperty());
+        filterBox.prefHeightProperty().bind(filterPopupControl.prefHeightProperty());
+        filterBox.maxHeightProperty().bind(filterPopupControl.maxHeightProperty());
         filterBox.setOnKeyPressed(this::onFilterKeyPress);
 
         CheckBox selectStateCbx = filterBox.getSelectStateCheckBox();

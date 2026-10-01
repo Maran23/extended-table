@@ -34,6 +34,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
+import tools.maran.extendedtable.filter.popup.FilterPopupControl;
 import tools.maran.extendedtable.manual.Person.Department;
 import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.tableview.ExtendedTableView;
@@ -172,6 +173,12 @@ public final class TableSampler {
         LongTableColumn<Person> column = new LongTableColumn<>("ID");
         column.setReadFunction(Person::id);
         column.setEditable(false);
+        column.setFilterPopupFactory(() -> {
+            FilterPopupControl<Person> pc = new FilterPopupControl<>();
+            pc.fixedCellSizeProperty().bind(column.getTableView().fixedCellSizeProperty());
+            pc.setPrefWidth(200);
+            return pc;
+        });
         return column;
     }
 
@@ -335,6 +342,12 @@ public final class TableSampler {
         LongTreeTableColumn<Person> column = new LongTreeTableColumn<>("ID");
         column.setReadFunction(Person::id);
         column.setEditable(false);
+        column.setFilterPopupFactory(() -> {
+            FilterPopupControl<TreeItem<Person>> pc = new FilterPopupControl<>();
+            pc.fixedCellSizeProperty().bind(column.getTreeTableView().fixedCellSizeProperty());
+            pc.setPrefWidth(200);
+            return pc;
+        });
         return column;
     }
 
