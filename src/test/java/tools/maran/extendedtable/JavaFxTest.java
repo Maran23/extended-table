@@ -107,7 +107,6 @@ public abstract class JavaFxTest {
 
         CountDownLatch latch = new CountDownLatch(1);
         Platform.startup(() -> {
-            // Otherwise, the toolkit exits as soon as a test closes the last window.
             Platform.setImplicitExit(false);
             Application.setUserAgentStylesheet(null);
             latch.countDown();

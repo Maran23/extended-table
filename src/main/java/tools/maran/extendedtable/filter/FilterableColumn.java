@@ -28,7 +28,7 @@ public interface FilterableColumn<S> {
     /// Returns the [FilterPopupControl], which is created by the
     /// [filter popup factory][#setFilterPopupFactory(Supplier)] on the first call.
     ///
-    /// @return the [FilterPopupControl]
+    /// @return the [FilterPopupControl], or null if the factory is null or returns null
     FilterPopupControl<S> getFilterPopup();
 
     /// Returns whether the filtering of this column is disabled or not.
@@ -39,10 +39,11 @@ public interface FilterableColumn<S> {
     /// Sets the factory which creates the [FilterPopupControl] when the filter of this column is opened
     /// for the first time. The column connects the created popup to the table afterward.
     ///
+    /// The default factory creates a [FilterPopupControl]
+    /// and binds its [FilterPopupControl#fixedCellSizeProperty()] to the fixed cell size of the table.
+    ///
     /// @param filterPopupFactory
     ///         the filter popup factory
-    /// @implNote The default factory just creates a [FilterPopupControl]
-    /// and binds its [FilterPopupControl#fixedCellSizeProperty()] to the fixed cell size of the table.
     void setFilterPopupFactory(Supplier<FilterPopupControl<S>> filterPopupFactory);
 
     /// Sets whether this column is currently filtered or not. Called by the table, which keeps track of the filters.

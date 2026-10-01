@@ -175,6 +175,13 @@ The JavaFX `TableView` and `TreeTableView` are powerful, but everything beyond t
 
 `ExtendedTable` is the API contract for all new features, so a `TableView` can be swapped for an `ExtendedTableView` without rewriting much of the surrounding code.
 
+The filter works in a different way than pretty much all other frameworks do. Instead of text based filter or a `FilteredList` that works with a `Predicate`, we are using the items directly from the table.
+The filter basically just mirrors the table items and will set back the selected items directly on the table, no steps inbetween. So there is no need for e.g. live reload the table on every keystroke, or any other processing. 
+
+During my testing back then, this was the fastest approach (by a lot) that works well with many items. 
+Even over 100k items are no problem.
+Also, the behavior is more close to spreadsheet tools like Excel, which might be more familiar to some users.
+
 ### API
 
 Details about the API naming and changelog.
@@ -196,3 +203,11 @@ Details about the API naming and changelog.
 ##### Version 1.0.0
 
 - Initial release
+
+##### Version 1.0.1
+
+- Optimize `CheckBox` column state handling
+- Improve `ExtendedTreeTableView` double click behavior
+- Improve column autosizing
+- Make it possible that the `FilterPopupControl` width/height can actually be set in code (Which apparently is normally ignored in JavaFX for popups) 
+- Tooltips with a short description for all buttons in the `FilterPopupControl`

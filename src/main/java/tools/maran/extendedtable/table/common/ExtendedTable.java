@@ -132,9 +132,9 @@ public interface ExtendedTable<S> {
         return (EventType<CommitEvent<S>>) PRE_COMMIT_EVENT;
     }
 
-    /// Forces the TableView to update what it is showing to the user.
+    /// Forces the table to update what it is showing to the user.
     /// This is useful in cases where the underlying data source has changed
-    /// in a way that is not observed by the Table itself.
+    /// in a way that is not observed by the table itself.
     void refresh();
 
     /// Refreshes the filter of all filterable columns.

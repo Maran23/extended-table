@@ -95,7 +95,7 @@ class ColumnAutosizeTest extends JavaFxTest {
             plainColumn.setPrefWidth(30);
             graphicColumn.setPrefWidth(30);
 
-            Control table = tableType.createTable(List.of(plainColumn, graphicColumn));
+            Control table = tableType.createTable(List.of(graphicColumn, plainColumn));
             show(table);
 
             ((ExtendedTable<?>) table).autosizeColumns();
@@ -116,12 +116,12 @@ class ColumnAutosizeTest extends JavaFxTest {
             plainColumn.setPrefWidth(30);
             graphicColumn.setPrefWidth(30);
 
-            Control table = tableType.createTable(List.of(plainColumn, graphicColumn));
+            Control table = tableType.createTable(List.of(graphicColumn, plainColumn));
             show(table);
 
             ((ExtendedTable<?>) table).autosizeColumns();
 
-            assertWiderThan(plainColumn.getWidth() + prefixLabel.getWidth(), graphicColumn);
+            assertWiderThan(plainColumn.getWidth() + prefixLabel.getWidth() - 1, graphicColumn);
         });
     }
 

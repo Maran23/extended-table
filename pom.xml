@@ -6,7 +6,7 @@
 
     <groupId>tools.maran</groupId>
     <artifactId>extended-table</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <name>Extended-Table</name>
