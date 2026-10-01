@@ -46,7 +46,7 @@ public enum TableType {
 
         @Override
         public FilterTableFixture createFixture() {
-            return new TableViewFixture(new ExtendedTableView<>());
+            return new TableViewFixture();
         }
 
         @Override
@@ -91,11 +91,6 @@ public enum TableType {
         public void setEditable(Control table, boolean editable) {
             ((ExtendedTableView<?>) table).setEditable(editable);
         }
-
-        @Override
-        public void autosizeColumns(Control table) {
-            ((ExtendedTableView<?>) table).autosizeColumns();
-        }
     }, TREE_TABLE_VIEW(".tree-table-cell") {
         @Override
         public ItemTable<TreeItem<Object>> createItemTable() {
@@ -104,7 +99,7 @@ public enum TableType {
 
         @Override
         public FilterTableFixture createFixture() {
-            return new TreeTableViewFixture(new ExtendedTreeTableView<>());
+            return new TreeTableViewFixture();
         }
 
         @Override
@@ -150,11 +145,6 @@ public enum TableType {
         public void setEditable(Control table, boolean editable) {
             ((ExtendedTreeTableView<?>) table).setEditable(editable);
         }
-
-        @Override
-        public void autosizeColumns(Control table) {
-            ((ExtendedTreeTableView<?>) table).autosizeColumns();
-        }
     };
 
     private final String cellSelector;
@@ -162,8 +152,6 @@ public enum TableType {
     TableType(String cellSelector) {
         this.cellSelector = cellSelector;
     }
-
-    public abstract void autosizeColumns(Control table);
 
     /// Creates a checkbox column, which reads and writes the first value of a [Row].
     public abstract TableColumnBase<?, ?> createCheckBoxColumn();
@@ -204,10 +192,9 @@ public enum TableType {
     /// [FilterTableFixture] for the [ExtendedTableView].
     static final class TableViewFixture implements FilterTableFixture {
 
-        private final ExtendedTableView<Row> tableView;
+        private final ExtendedTableView<Row> tableView = new ExtendedTableView<>();
 
-        TableViewFixture(ExtendedTableView<Row> table) {
-            tableView = table;
+        TableViewFixture() {
             tableView.getColumns().addAll(List.of(createColumn("Column 1", Row::first, Row::setFirst),
                     createColumn("Column 2", Row::second, Row::setSecond),
                     createColumn("Column 3", Row::third, Row::setThird)));
@@ -336,10 +323,9 @@ public enum TableType {
     /// [FilterTableFixture] for the [ExtendedTreeTableView], with the rows as flat children of the root.
     static final class TreeTableViewFixture implements FilterTableFixture {
 
-        private final ExtendedTreeTableView<Row> treeTableView;
+        private final ExtendedTreeTableView<Row> treeTableView = new ExtendedTreeTableView<>();
 
-        TreeTableViewFixture(ExtendedTreeTableView<Row> table) {
-            treeTableView = table;
+        TreeTableViewFixture() {
             treeTableView.getColumns().addAll(List.of(createColumn("Column 1", Row::first, Row::setFirst),
                     createColumn("Column 2", Row::second, Row::setSecond),
                     createColumn("Column 3", Row::third, Row::setThird)));
@@ -363,12 +349,8 @@ public enum TableType {
 
         @Override
         public void filter(int columnIndex, List<Row> rows) {
-            // Rows which are not a backing row get a new tree item, which is not inside the backing items as well.
-            Map<Row, TreeItem<Row>> treeItems = new IdentityHashMap<>();
-            treeTableView.getBackingItems().forEach(item -> treeItems.put(item.getValue(), item));
-
             treeTableView.filter((AbstractFilterTreeTableColumn<Row, ?>) treeTableView.getColumns().get(columnIndex),
-                    rows.stream().map(row -> treeItems.computeIfAbsent(row, TreeItem::new)).toList());
+                    toTreeItems(rows));
         }
 
         @Override
@@ -437,12 +419,7 @@ public enum TableType {
 
         @Override
         public void setBackingRows(List<Row> rows) {
-            // Rows which are already a backing row keep their tree item, just like they keep their instance.
-            Map<Row, TreeItem<Row>> treeItems = new IdentityHashMap<>();
-            treeTableView.getBackingItems().forEach(item -> treeItems.put(item.getValue(), item));
-
-            treeTableView.getBackingItems()
-                    .setAll(rows.stream().map(row -> treeItems.computeIfAbsent(row, TreeItem::new)).toList());
+            treeTableView.getBackingItems().setAll(toTreeItems(rows));
         }
 
         @Override
@@ -476,6 +453,13 @@ public enum TableType {
             column.setReadFunction(readFunction::apply);
             column.setWriteFunction(writeFunction);
             return column;
+        }
+
+        private List<TreeItem<Row>> toTreeItems(List<Row> rows) {
+            Map<Row, TreeItem<Row>> treeItems = new IdentityHashMap<>();
+            treeTableView.getBackingItems().forEach(item -> treeItems.put(item.getValue(), item));
+
+            return rows.stream().map(row -> treeItems.computeIfAbsent(row, TreeItem::new)).toList();
         }
     }
 }

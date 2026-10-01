@@ -11,7 +11,6 @@ import java.util.function.Consumer;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -19,7 +18,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-import org.junit.jupiter.api.AfterEach;
 import tools.maran.extendedtable.JavaFxTest;
 import tools.maran.extendedtable.data.FilterTableFixture;
 import tools.maran.extendedtable.data.Row;
@@ -67,13 +65,6 @@ public abstract class FilterTableTestBase extends JavaFxTest {
             assertFalse(filterPopup.isShowing(),
                     "The filter popup should be hidden after the filter of the column was applied");
         });
-    }
-
-    @AfterEach
-    protected void closeStage() {
-        if (stage != null) {
-            runOnFxThread(stage::close);
-        }
     }
 
     /// Commits the value into the cell like a user editing it. The row index is the visible one.
@@ -137,9 +128,7 @@ public abstract class FilterTableTestBase extends JavaFxTest {
             fixture = tableType.createFixture();
             fixture.setRows(tableRows);
 
-            stage = new Stage();
-            stage.setScene(new Scene(fixture.getTable(), 800, 600));
-            stage.show();
+            stage = showInStage(fixture.getTable(), 800, 600);
         });
     }
 

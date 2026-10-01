@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.collections.FXCollections;
-import javafx.scene.Scene;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TreeItem;
 
@@ -97,8 +96,7 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
     void testScrollToItem() {
         runOnFxThread(() -> {
             // The scroll is only performed once the table has a skin.
-            var _ = new Scene(table);
-            table.applyCss();
+            showInStage(table, 400, 300);
 
             AtomicInteger scrolledRow = new AtomicInteger(-1);
             table.setOnScrollTo(event -> scrolledRow.set(event.getScrollTarget()));

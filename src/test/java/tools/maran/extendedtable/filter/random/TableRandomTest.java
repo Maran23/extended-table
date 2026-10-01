@@ -176,7 +176,7 @@ class TableRandomTest extends FilterTableTestBase {
             assertEquals(!filteredOutRows.isEmpty(), isFiltered(), message);
         }
 
-        closeStage();
+        closeWindows();
     }
 
     private List<Row> randomizableRows() {

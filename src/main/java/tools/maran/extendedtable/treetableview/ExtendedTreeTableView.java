@@ -161,7 +161,7 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         setRoot(root);
     }
 
-    /// Autosizes all [TreeTableColumn]s.
+    @Override
     public final void autosizeColumns() {
         getProperties().put(ExtendedTableSkin.AUTOSIZE_COLUMNS, null);
     }

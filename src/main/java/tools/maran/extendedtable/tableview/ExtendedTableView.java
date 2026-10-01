@@ -136,7 +136,7 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         setItems(items);
     }
 
-    /// Autosizes all [TableColumn]s.
+    @Override
     public final void autosizeColumns() {
         getProperties().put(ExtendedTableSkin.AUTOSIZE_COLUMNS, null);
     }

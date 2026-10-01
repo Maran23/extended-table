@@ -1,5 +1,6 @@
 package tools.maran.extendedtable;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -7,7 +8,12 @@ import java.util.function.Supplier;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 
 /// Base class for all tests which need a running JavaFX toolkit.
@@ -20,6 +26,11 @@ public abstract class JavaFxTest {
     private static final long TIMEOUT_SECONDS = 2;
 
     private static boolean toolkitStarted;
+
+    @AfterEach
+    protected void closeWindows() {
+        runOnFxThread(() -> List.copyOf(Window.getWindows()).forEach(Window::hide));
+    }
 
     /// Runs the given [Supplier] on the JavaFX application thread and returns its value.
     ///
@@ -64,6 +75,24 @@ public abstract class JavaFxTest {
             case Error error -> throw error;
             default -> throw new IllegalStateException(throwable);
         }
+    }
+
+    /// Shows the given root inside a new [Stage] with the given size and lays it out.
+    /// All windows are closed after each test.
+    ///
+    /// @param root
+    ///         the root of the [Scene]
+    /// @param width
+    ///         the width of the [Scene]
+    /// @param height
+    ///         the height of the [Scene]
+    /// @return the shown [Stage]
+    protected static Stage showInStage(Parent root, double width, double height) {
+        Stage stage = new Stage();
+        stage.setScene(new Scene(root, width, height));
+        stage.show();
+        root.layout();
+        return stage;
     }
 
     @BeforeAll

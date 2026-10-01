@@ -26,6 +26,10 @@ public interface ExtendedTable<S> {
     /// Commit event.
     EventType<?> COMMIT_EVENT = new EventType<>(CommitEvent.ANY, "TABLE_COMMIT");
 
+    /// Autosizes all columns. That is, all columns will be set to the best-fitting size,
+    /// measured by probing the column header and some cells.
+    void autosizeColumns();
+
     /// Returns the [EventType] of the commit event.
     ///
     /// @param <S>
@@ -128,10 +132,9 @@ public interface ExtendedTable<S> {
         return (EventType<CommitEvent<S>>) PRE_COMMIT_EVENT;
     }
 
-    /// Calling `refresh()` forces the table to recreate and repopulate the cells necessary to populate the
-    /// visual bounds of the node.
-    /// In other words, this forces the table to update what it is showing to the user. This is useful in cases where
-    /// the underlying data source has changed in a way that is not observed by the table itself.
+    /// Forces the TableView to update what it is showing to the user.
+    /// This is useful in cases where the underlying data source has changed
+    /// in a way that is not observed by the Table itself.
     void refresh();
 
     /// Refreshes the filter of all filterable columns.

@@ -5,18 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
-import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.skin.TableColumnHeader;
-import javafx.stage.Stage;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import tools.maran.extendedtable.data.TableType;
+import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.tableview.ExtendedTableView;
 import tools.maran.extendedtable.treetableview.ExtendedTreeTableView;
 
@@ -27,13 +25,6 @@ class ColumnAutosizeTest extends JavaFxTest {
 
     private static final String LONG_VALUE = "A value that is much wider than the column";
     private static final double DEFAULT_COLUMN_WIDTH = 80;
-
-    private Stage stage;
-
-    @AfterEach
-    void closeStage() {
-        runOnFxThread(stage::close);
-    }
 
     @DisplayName("Autosizing a nested column lays out its leaf headers without pixel gaps")
     @ParameterizedTest
@@ -47,7 +38,7 @@ class ColumnAutosizeTest extends JavaFxTest {
             Control table = tableType.createTable(List.of(nestedColumn));
             show(table);
 
-            tableType.autosizeColumns(table);
+            ((ExtendedTable<?>) table).autosizeColumns();
             table.layout();
 
             TableColumnHeader firstHeader = getHeader(table, firstColumn);
@@ -68,7 +59,7 @@ class ColumnAutosizeTest extends JavaFxTest {
             show(table);
             assertEquals(30, column.getWidth());
 
-            tableType.autosizeColumns(table);
+            ((ExtendedTable<?>) table).autosizeColumns();
 
             assertWiderThan(DEFAULT_COLUMN_WIDTH, column);
         });
@@ -88,7 +79,7 @@ class ColumnAutosizeTest extends JavaFxTest {
             show(table);
             assertEquals(30, leafColumn.getWidth());
 
-            tableType.autosizeColumns(table);
+            ((ExtendedTable<?>) table).autosizeColumns();
 
             assertWiderThan(DEFAULT_COLUMN_WIDTH, leafColumn);
         });
@@ -107,7 +98,7 @@ class ColumnAutosizeTest extends JavaFxTest {
             Control table = tableType.createTable(List.of(plainColumn, graphicColumn));
             show(table);
 
-            tableType.autosizeColumns(table);
+            ((ExtendedTable<?>) table).autosizeColumns();
 
             assertWiderThan(plainColumn.getWidth() + DEFAULT_COLUMN_WIDTH, graphicColumn);
         });
@@ -128,7 +119,7 @@ class ColumnAutosizeTest extends JavaFxTest {
             Control table = tableType.createTable(List.of(plainColumn, graphicColumn));
             show(table);
 
-            tableType.autosizeColumns(table);
+            ((ExtendedTable<?>) table).autosizeColumns();
 
             assertWiderThan(plainColumn.getWidth() + prefixLabel.getWidth(), graphicColumn);
         });
@@ -179,10 +170,7 @@ class ColumnAutosizeTest extends JavaFxTest {
                 .orElseThrow();
     }
 
-    private void show(Control table) {
-        stage = new Stage();
-        stage.setScene(new Scene(table, 800, 300));
-        stage.show();
-        table.layout();
+    private static void show(Control table) {
+        showInStage(table, 800, 300);
     }
 }
