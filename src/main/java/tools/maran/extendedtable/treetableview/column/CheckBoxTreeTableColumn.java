@@ -1,7 +1,5 @@
 package tools.maran.extendedtable.treetableview.column;
 
-import java.util.Objects;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanBinding;
@@ -119,16 +117,6 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
         decideCheckBoxState(newValue);
     }
 
-    private boolean allItemsSelected() {
-        return getItems().parallelStream().map(tr -> readValue(tr.getValue())).filter(Objects::nonNull)
-                .allMatch(bool -> bool);
-    }
-
-    private boolean allItemsUnselected() {
-        return getItems().parallelStream().map(tr -> readValue(tr.getValue())).filter(Objects::nonNull)
-                .noneMatch(bool -> bool);
-    }
-
     private void decideCheckBoxState() {
         if (!isCheckBoxUsed()) {
             return;
@@ -184,21 +172,12 @@ public class CheckBoxTreeTableColumn<S> extends GenericTreeTableColumn<S, Boolea
             return;
         }
 
-        if (isSelected) {
-            if (allItemsSelected()) {
-                checkBox.setIndeterminate(false);
-                checkBox.setSelected(true);
-                return;
-            }
-        } else {
-            if (allItemsUnselected()) {
-                checkBox.setIndeterminate(false);
-                checkBox.setSelected(false);
-                return;
-            }
+        Boolean opposite = !isSelected;
+        boolean mixed = getItems().stream().anyMatch(item -> opposite.equals(readValue(item.getValue())));
+        checkBox.setIndeterminate(mixed);
+        if (!mixed) {
+            checkBox.setSelected(isSelected);
         }
-
-        checkBox.setIndeterminate(true);
     }
 
     private boolean isCheckBoxUsed() {

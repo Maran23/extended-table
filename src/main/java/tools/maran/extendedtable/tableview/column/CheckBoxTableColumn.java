@@ -1,7 +1,5 @@
 package tools.maran.extendedtable.tableview.column;
 
-import java.util.Objects;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanBinding;
@@ -118,14 +116,6 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
         decideCheckBoxState(newValue);
     }
 
-    private boolean allItemsSelected() {
-        return getItems().parallelStream().map(this::readValue).filter(Objects::nonNull).allMatch(bool -> bool);
-    }
-
-    private boolean allItemsUnselected() {
-        return getItems().parallelStream().map(this::readValue).filter(Objects::nonNull).noneMatch(bool -> bool);
-    }
-
     /// Faster method than [#decideCheckBoxState()] as we already have a hint of what we need to check.
     ///
     /// @param isSelected
@@ -141,21 +131,12 @@ public class CheckBoxTableColumn<S> extends GenericTableColumn<S, Boolean> {
             return;
         }
 
-        if (isSelected) {
-            if (allItemsSelected()) {
-                checkBox.setIndeterminate(false);
-                checkBox.setSelected(true);
-                return;
-            }
-        } else {
-            if (allItemsUnselected()) {
-                checkBox.setIndeterminate(false);
-                checkBox.setSelected(false);
-                return;
-            }
+        Boolean opposite = !isSelected;
+        boolean mixed = getItems().stream().anyMatch(item -> opposite.equals(readValue(item)));
+        checkBox.setIndeterminate(mixed);
+        if (!mixed) {
+            checkBox.setSelected(isSelected);
         }
-
-        checkBox.setIndeterminate(true);
     }
 
     private void decideCheckBoxState() {
