@@ -2,11 +2,11 @@
 
 `ExtendedTable` is a JavaFX library that extends the default `TableView` and `TreeTableView` with many new features like a very fast filter, validation, fixed column support, tree lines and more.
 
-![Table Sampler](https://raw.githubusercontent.com/Maran23/extended-table/demo/demo/table.webp)
+![Table Sampler](https://github.com/Maran23/extended-table/blob/demo/demo/table.webp)
 
-![TreeTable Sampler](https://raw.githubusercontent.com/Maran23/extended-table/demo/demo/treetable.webp)
+![TreeTable Sampler](https://github.com/Maran23/extended-table/blob/demo/demo/treetable.webp)
 
-![Filter Sampler](https://raw.githubusercontent.com/Maran23/extended-table/demo/demo/filter.webp)
+![Filter Sampler](https://github.com/Maran23/extended-table/blob/demo/demo/filter.webp)
 
 ## Table of Contents
 
@@ -51,26 +51,24 @@
 <dependency>
     <groupId>tools.maran</groupId>
     <artifactId>extended-table</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'tools.maran:extended-table:1.0.0'
+implementation 'tools.maran:extended-table:1.0.1'
 ```
 
 ## Usage
-
-### Java
 
 Both tables can replace their JavaFX counterpart, the main difference being the rows and columns. 
 A read and a write function take the place of the cell value factory and commit, which is all that is needed for editing, validation and filtering.
 The second difference is the data model: `setItems(...)` sets the *backing items*, while `getItems()` only returns the
 rows currently visible, so items should be added or removed via `getBackingItems()` and all filters are dropped with `restoreBackingItems()`.
 
-#### ExtendedTableView
+### ExtendedTableView
 
 ```java
 ExtendedTableView<Person> tableView = new ExtendedTableView<>();
@@ -101,7 +99,7 @@ tableView.getColumns().addAll(firstName, age);
 tableView.setItems(FXCollections.observableArrayList(persons));
 ```
 
-#### ExtendedTreeTableView
+### ExtendedTreeTableView
 
 The same table, but with `TreeItem`s and the `*TreeTableColumn` classes:
 
@@ -137,7 +135,7 @@ treeTableView.getColumns().addAll(firstName, age);
 treeTableView.setItems(FXCollections.observableArrayList(persons.stream().map(TreeItem::new).toList()));
 ```
 
-#### Filter
+### Filter
 
 The items in the filter popup will always match the underlying items of the table.
 The popup is created by the `FilterPopupFactory` of the column when the filter is opened for the first time.
@@ -200,10 +198,6 @@ Details about the API naming and changelog.
 
 #### Changelog
 
-##### Version 1.0.0
-
-- Initial release
-
 ##### Version 1.0.1
 
 - Optimize `CheckBox` column state handling
@@ -211,3 +205,7 @@ Details about the API naming and changelog.
 - Improve column autosizing
 - Make it possible that the `FilterPopupControl` width/height can actually be set in code (Which apparently is normally ignored in JavaFX for popups) 
 - Tooltips with a short description for all buttons in the `FilterPopupControl`
+
+##### Version 1.0.0
+
+- Initial release
