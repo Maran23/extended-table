@@ -5,6 +5,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
 /// [GenericTextInputTreeTableCell] which shows a [TextField] on edit.
+/// The [TextField] has the `cell-text-input` style class instead of the default ones, which themes style, so it fills the cell
+/// without a border.
 ///
 /// @param <S>
 ///         the source type
@@ -19,6 +21,7 @@ public class GenericTextFieldTreeTableCell<S, T> extends GenericTextInputTreeTab
     @Override
     protected TextField createTextInput() {
         TextField textFieldNode = new TextField();
+        textFieldNode.getStyleClass().setAll("cell-text-input");
 
         textFieldNode.setOnAction(event -> {
             commitText(textFieldNode.getText());

@@ -20,6 +20,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -33,12 +34,11 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.util.Pair;
 
 import tools.maran.extendedtable.filter.FilterableColumn;
 import tools.maran.extendedtable.filter.TableFilter;
+import tools.maran.extendedtable.table.common.CellKeyboard;
 import tools.maran.extendedtable.table.common.CommitEvent;
 import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.table.common.ExtendedTableSkin;
@@ -63,18 +63,19 @@ import tools.maran.extendedtable.treetableview.row.ExtendedTreeTableRow;
 /// A column can also be filtered in code via [#filter(FilterableColumn, java.util.Collection)] after the items were set,
 /// e.g. to initially only show some items. This is the same as when the user filters the column.
 ///
-/// # Limitation
+/// # Modification
 ///
-/// Since the [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()],
-/// it is not allowed to either add or remove items to it. In fact this will throw an [IllegalStateException].
+/// The [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()].
+/// Items added to or removed from them while filtered are added to or removed from the backing items as well.
+/// Added items are inserted after the item shown before them, or at the start, and are always shown.
 /// When the [items][#getItems()] should be replaced either use [#setRoot(TreeItem)] or [#setItems(ObservableList)].
+/// The [#itemsProperty()] can not be bound. To keep the items in sync with another list, bind the content of the
+/// [backing items][#getBackingItems()] instead: `Bindings.bindContent(table.getBackingItems(), items)`.
 /// It is also possible to modify the backing items directly via [#getBackingItems()].
 /// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
 /// That is, added (or replacing) items are always shown, while removed items disappear. Items which are removed and
 /// added within the same change, e.g. via [ObservableList#setAll(java.util.Collection)], are not considered new and
 /// keep their visibility. The table also stays filtered when every backing item is shown again due to such changes.
-///
-/// Items are tracked by identity, so the same item instance must not be contained multiple times in the backing items.
 ///
 /// @param <S>
 ///         the source type
@@ -84,8 +85,10 @@ import tools.maran.extendedtable.treetableview.row.ExtendedTreeTableRow;
 /// @see #getBackingItems()
 public class ExtendedTreeTableView<S> extends TreeTableView<S> implements ExtendedTable<TreeItem<S>> {
 
-    private final TableFilter<TreeItem<S>> tableFilter = new TableFilter<>(this,
-            items -> getRoot().getChildren().setAll(items), this::resetValidator);
+    private final TableFilter<TreeItem<S>> tableFilter = new TableFilter<>(this, this::showFilteredItems,
+            this::resetValidator);
+
+    private final CellKeyboard<TreeItem<S>> cellKeyboard = new CellKeyboard<>(this, this::getExpandedItemCount);
 
     private final ListChangeListener<TreeItem<S>> childrenListener = tableFilter::itemsChanged;
     private final WeakListChangeListener<TreeItem<S>> weakChildrenListener = new WeakListChangeListener<>(
@@ -148,7 +151,8 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
 
         addEventFilter(ExtendedTable.commitEvent(), this::onCommit);
 
-        addEventFilter(KeyEvent.KEY_PRESSED, this::traverseToNextCell);
+        addEventFilter(KeyEvent.KEY_PRESSED, cellKeyboard::handle);
+        addEventFilter(KeyEvent.KEY_TYPED, cellKeyboard::handle);
     }
 
     /// Creates a new [ExtendedTreeTableView] instance.
@@ -189,6 +193,11 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         isInEdit = true;
         super.edit(row, column);
         isInEdit = false;
+    }
+
+    @Override
+    public void edit(int row, TableColumnBase<TreeItem<S>, ?> column) {
+        edit(row, (TreeTableColumn<S, ?>) column);
     }
 
     @Override
@@ -247,6 +256,11 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
     /// @return the fixed column count
     public final int getFixedColumnCount() {
         return fixedColumnCount == null ? 0 : fixedColumnCountProperty().get();
+    }
+
+    @Override
+    public TableColumnBase<TreeItem<S>, ?> getFocusedColumn() {
+        return getFocusModel().getFocusedCell().getTableColumn();
     }
 
     @Override
@@ -352,7 +366,16 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
     @Override
     public final ObjectProperty<ObservableList<TreeItem<S>>> itemsProperty() {
         if (items == null) {
-            items = new SimpleObjectProperty<>(this, "items");
+            items = new SimpleObjectProperty<>(this, "items") {
+                @Override
+                public void bind(ObservableValue<? extends ObservableList<TreeItem<S>>> observable) {
+                    throw new UnsupportedOperationException("""
+                            The items property must not be bound, as the table shows its own items to filter them. \
+                            Use 'setItems(..)', or 'Bindings.bindContent(table.getBackingItems(), items)' to keep \
+                            the items in sync.
+                            """);
+                }
+            };
         }
         return items;
     }
@@ -402,6 +425,16 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
     @Override
     public final void restoreBackingItems() {
         tableFilter.restoreBackingItems();
+    }
+
+    @Override
+    public final void scrollIntoView(int index) {
+        getProperties().put(ExtendedTableSkin.SCROLL_INTO_VIEW, index);
+    }
+
+    @Override
+    public void scrollToColumn(TableColumnBase<TreeItem<S>, ?> column) {
+        scrollToColumn((TreeTableColumn<S, ?>) column);
     }
 
     /// Revalidates all items if the validation is enabled.
@@ -550,45 +583,6 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         treeItem.getChildren().forEach(this::addTreeItem);
     }
 
-    /// Finds the previous or next cell to select/edit.
-    /// In case we reach the last cell and want to select the next, we return the first column.
-    ///
-    /// @param visibleLeafColumns
-    ///         all visible and editable leaf columns
-    /// @param forward
-    ///         true if we want to move forward (right); false otherwise (left)
-    /// @return the next table column
-    private Pair<TreeTableColumn<S, ?>, Integer> findNextTablePosition(List<TreeTableColumn<S, ?>> visibleLeafColumns,
-            boolean forward) {
-        TreeTableColumn<S, ?> currentColumn = getFocusModel().getFocusedCell().getTableColumn();
-        int nextColumnIndex = visibleLeafColumns.indexOf(currentColumn);
-        int nextRowIndex = getSelectionModel().getSelectedIndex();
-
-        if (forward) {
-            nextColumnIndex++;
-            if (nextColumnIndex > visibleLeafColumns.size() - 1) {
-                nextColumnIndex = 0;
-                nextRowIndex++;
-
-                if (nextRowIndex == getExpandedItemCount()) {
-                    nextRowIndex = 0;
-                }
-            }
-        } else {
-            nextColumnIndex--;
-            if (nextColumnIndex < 0) {
-                nextColumnIndex = visibleLeafColumns.size() - 1;
-                nextRowIndex--;
-
-                if (nextRowIndex == -1) {
-                    nextRowIndex = getExpandedItemCount() - 1;
-                }
-            }
-        }
-
-        return new Pair<>(visibleLeafColumns.get(nextColumnIndex), nextRowIndex);
-    }
-
     private void onCommit(CommitEvent<TreeItem<S>> event) {
         if (tableValidator != null) {
             tableValidator.revalidate(event.getItem());
@@ -649,53 +643,13 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         itemsProperty().set(items);
     }
 
-    private void traverseToNextCell(KeyEvent event) {
-        if (event.getCode() != KeyCode.TAB) {
-            return;
+
+    /// Shows the items as children of the root, if there is one.
+    private void showFilteredItems(List<TreeItem<S>> items) {
+        TreeItem<S> root = getRoot();
+        if (root != null) {
+            root.getChildren().setAll(items);
         }
-
-        List<TreeTableColumn<S, ?>> visibleLeafColumns = getVisibleLeafColumns().stream()
-                .filter(TableColumnBase::isEditable).toList();
-
-        // There is no column that supports editing.
-        if (visibleLeafColumns.isEmpty()) {
-            return;
-        }
-
-        TreeTableColumn<S, ?> currentColumn = getFocusModel().getFocusedCell().getTableColumn();
-        if (currentColumn == null) {
-            return;
-        }
-
-        boolean wasEditing = isEditing();
-        boolean isForward = !event.isShiftDown();
-
-        // Bounds the search when no cell can be edited.
-        int remainingCells = getExpandedItemCount() * visibleLeafColumns.size();
-        boolean isDone;
-        Pair<TreeTableColumn<S, ?>, Integer> tablePair;
-        do {
-            tablePair = findNextTablePosition(visibleLeafColumns, isForward);
-
-            TreeTableColumn<S, ?> nextColumn = tablePair.getKey();
-            int nextRow = tablePair.getValue();
-
-            // Flush any editing cell to commit or cancel his value by changing the focus and selection.
-            getSelectionModel().focus(nextRow);
-            getSelectionModel().select(nextRow, nextColumn);
-
-            if (wasEditing) {
-                edit(nextRow, nextColumn);
-
-                isDone = isEditing();
-            } else {
-                isDone = true;
-            }
-        } while (!isDone && --remainingCells > 0);
-
-        TreeTableColumn<S, ?> nextColumn = tablePair.getKey();
-        scrollToColumn(getVisibleLeafColumn(getVisibleLeafIndex(nextColumn) - 1));
-        event.consume();
     }
 
     private ReadOnlyBooleanWrapper validPropertyImpl() {

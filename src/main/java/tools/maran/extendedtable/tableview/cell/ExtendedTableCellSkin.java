@@ -3,6 +3,8 @@ package tools.maran.extendedtable.tableview.cell;
 import javafx.css.PseudoClass;
 import javafx.scene.control.skin.TableCellSkin;
 
+import tools.maran.extendedtable.table.common.CellLayout;
+
 /// [TableCellSkin] for the [ExtendedTableCell].
 ///
 /// @param <S>
@@ -23,6 +25,7 @@ public class ExtendedTableCellSkin<S, T> extends TableCellSkin<S, T> {
         super(tableCell);
         this.tableCell = tableCell;
 
+        registerChangeListener(tableCell.fixedOverlapProperty(), _ -> updateClip());
         registerChangeListener(tableCell.editableProperty(), _ -> updateEditablePseudoClass());
         registerChangeListener(tableCell.getTableRow().editableProperty(), _ -> updateEditablePseudoClass());
         registerChangeListener(tableCell.getTableColumn().editableProperty(), _ -> updateEditablePseudoClass());
@@ -42,6 +45,12 @@ public class ExtendedTableCellSkin<S, T> extends TableCellSkin<S, T> {
     protected void layoutChildren(double x, double y, double w, double h) {
         // Overwritten as JavaFX is calculating in some weird magic offset.
         layoutLabelInArea(x, y, w, h);
+        CellLayout.layoutEditor(tableCell, 0);
+        updateClip();
+    }
+
+    private void updateClip() {
+        CellLayout.updateClip(tableCell, tableCell.getFixedOverlap());
     }
 
     private void updateEditablePseudoClass() {

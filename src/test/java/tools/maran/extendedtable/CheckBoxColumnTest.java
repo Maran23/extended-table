@@ -6,9 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
+import javafx.event.Event;
+import javafx.event.EventType;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Labeled;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -68,5 +79,53 @@ class CheckBoxColumnTest extends JavaFxTest {
             assertFalse(checkBox.isSelected());
             assertFalse(checkBox.isIndeterminate());
         });
+    }
+
+    @DisplayName("A checkbox cell is styled like the one of JavaFX, centered without padding")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testCheckBoxCellIsStyledLikeTheOneOfJavaFx(TableType tableType) {
+        runOnFxThread(() -> {
+            Control table = tableType.createTable(List.of(tableType.createCheckBoxColumn()));
+
+            showInStage(table, 400, 300);
+
+            Labeled checkBoxCell = (Labeled) table.lookup(tableType.getCellSelector());
+            assertEquals(Pos.CENTER, checkBoxCell.getAlignment());
+            assertEquals(Insets.EMPTY, checkBoxCell.getPadding());
+        });
+    }
+
+    @DisplayName("Clicking the checkbox of a cell selects only its row, like a click on the cell")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testClickingTheCheckBoxSelectsOnlyItsRow(TableType tableType) {
+        runOnFxThread(() -> {
+            Row rowC = new Row("false", "C", null);
+            Control table = tableType.createTable(List.of(tableType.createCheckBoxColumn()),
+                    List.of(new Row("false", "A", null), new Row("false", "B", null), rowC));
+            tableType.setEditable(table, true);
+            showInStage(table, 400, 300);
+            TableSelectionModel<?> selectionModel = ((ExtendedTable<?>) table).getSelectionModel();
+            selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
+            selectionModel.select(0);
+
+            CheckBox checkBox = (CheckBox) table.lookupAll(".check-box").stream()
+                    .filter(node -> node.getParent() instanceof IndexedCell<?> cell && cell.getIndex() == 2)
+                    .findFirst().orElseThrow();
+            click(checkBox);
+
+            assertEquals(List.of(2), selectionModel.getSelectedIndices());
+            assertEquals("true", rowC.first());
+        });
+    }
+
+    private static void click(CheckBox checkBox) {
+        Point2D center = checkBox.localToScene(checkBox.getWidth() / 2, checkBox.getHeight() / 2);
+        for (EventType<MouseEvent> type : List.of(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED)) {
+            Event.fireEvent(checkBox, new MouseEvent(type, center.getX(), center.getY(), center.getX(), center.getY(),
+                    MouseButton.PRIMARY, 1, false, false, false, false, type == MouseEvent.MOUSE_PRESSED, false, false,
+                    true, false, true, null));
+        }
     }
 }

@@ -1,8 +1,12 @@
 package tools.maran.extendedtable.treetableview.cell;
 
 import javafx.beans.binding.Bindings;
-import javafx.geometry.Pos;
+import javafx.event.Event;
+import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 
 /// [ExtendedTreeTableCell] which shows a [CheckBox].
 ///
@@ -16,7 +20,23 @@ public class CheckBoxTreeTableCell<S> extends ExtendedTreeTableCell<S, Boolean> 
 
     /// Creates a new [CheckBoxTreeTableCell] instance.
     public CheckBoxTreeTableCell() {
-        setAlignment(Pos.CENTER);
+        // The class of the JavaFX cell, and the one of the table cell, as Modena only styles that one
+        getStyleClass().addAll("check-box-tree-table-cell", "check-box-table-cell");
+    }
+
+    /// Focuses the [CheckBox], so it can be toggled with ENTER or SPACE.
+    @Override
+    protected Class<? extends Node> getEditorType() {
+        return CheckBox.class;
+    }
+
+    @Override
+    public void startEdit() {
+        super.startEdit();
+
+        if (isEditing()) {
+            checkBox.requestFocus();
+        }
     }
 
     /// Creates the [CheckBox] which is shown in this cell.
@@ -24,7 +44,17 @@ public class CheckBoxTreeTableCell<S> extends ExtendedTreeTableCell<S, Boolean> 
     /// @return the newly created [CheckBox]
     protected CheckBox createCheckBox() {
         CheckBox checkBoxNode = new CheckBox();
+        checkBoxNode.setFocusTraversable(false);
+        // The CheckBox consumes them, so the cell gets them as well and selects itself like for any other click.
+        checkBoxNode.addEventFilter(MouseEvent.MOUSE_PRESSED, this::passToCell);
+        checkBoxNode.addEventFilter(MouseEvent.MOUSE_RELEASED, this::passToCell);
         checkBoxNode.selectedProperty().addListener(_ -> startAndCommitEdit(checkBoxNode));
+        checkBoxNode.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                checkBoxNode.fire();
+                e.consume();
+            }
+        });
 
         return checkBoxNode;
     }
@@ -52,6 +82,10 @@ public class CheckBoxTreeTableCell<S> extends ExtendedTreeTableCell<S, Boolean> 
 
             setGraphic(checkBox);
         }
+    }
+
+    private void passToCell(MouseEvent event) {
+        Event.fireEvent(this, event.copyFor(this, this));
     }
 
     private void startAndCommitEdit(CheckBox checkBoxNode) {

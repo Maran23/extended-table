@@ -5,6 +5,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
 /// [GenericTextInputTableCell] which shows a [TextArea] on edit.
+/// The [TextArea] has the `cell-text-input` and `cell-text-area` style class instead of the default ones, which themes style, so it fills the cell
+/// without a border.
 ///
 /// @param <S>
 ///         the source type
@@ -19,6 +21,7 @@ public class GenericTextAreaTableCell<S, T> extends GenericTextInputTableCell<S,
     @Override
     protected TextArea createTextInput() {
         TextArea textAreaNode = new TextArea();
+        textAreaNode.getStyleClass().setAll("cell-text-input", "cell-text-area");
         textAreaNode.setWrapText(true);
 
         textAreaNode.addEventFilter(KeyEvent.KEY_PRESSED, event -> {

@@ -1,7 +1,11 @@
 package tools.maran.extendedtable.treetableview.cell;
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -10,6 +14,7 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
+import tools.maran.extendedtable.table.common.CellKeyboard;
 import tools.maran.extendedtable.treetableview.ExtendedTreeTableView;
 
 /// [TreeTableCell] with extended functionality.
@@ -25,10 +30,12 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
 
     private static final PseudoClass INVALID_PSEUDOCLASS = PseudoClass.getPseudoClass("invalid");
 
+    private final DoubleProperty fixedOverlap = new SimpleDoubleProperty(this, "fixedOverlap");
+
     /// Creates a new [ExtendedTreeTableCell] instance.
     public ExtendedTreeTableCell() {
-        // Override the cell alignment as otherwise JavaFX is doing it in the layout of a table row for whatever reason.
-        setAlignment(Pos.CENTER_LEFT);
+        // A user agent origin stops the TableRowSkinBase from setting TOP_LEFT, which only does so without any origin.
+        ((StyleableProperty<Pos>) alignmentProperty()).applyStyle(StyleOrigin.USER_AGENT, Pos.CENTER_LEFT);
 
         // We don't want the cell to expand/collapse if the user double click this cell when editable.
         // Therefore, we may consume this event and send a normal edit event instead.
@@ -87,9 +94,25 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
         updateItem(newValue, false);
     }
 
+    /// Returns the width of this cell, from its left edge, which is overlapped by the fixed cells of its row.
+    ///
+    /// @return the overlapped width, 0 when this cell is not overlapped
+    public final double getFixedOverlap() {
+        return fixedOverlap.get();
+    }
+
+    /// Sets the width of this cell, from its left edge, which is overlapped by the fixed cells of its row.
+    /// That part is clipped, so the fixed cells can stay transparent and show the row background of any theme.
+    ///
+    /// @param width
+    ///         the overlapped width, 0 when this cell is not overlapped
+    public final void setFixedOverlap(double width) {
+        fixedOverlap.set(width);
+    }
+
     @Override
     public void startEdit() {
-        if (isEditing()) {
+        if (isEditing() || !CellKeyboard.isEditorAccepted(getTreeTableView(), getEditorType())) {
             return;
         }
 
@@ -120,6 +143,14 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
     @Override
     protected Skin<?> createDefaultSkin() {
         return new ExtendedTreeTableCellSkin<>(this);
+    }
+
+    /// Returns the type of the editor shown while editing. An edit started by a key only starts, when the editor
+    /// matches the key, see [CellKeyboard].
+    ///
+    /// @return the type of the editor, or null when unknown, so no key starts an edit
+    protected Class<? extends Node> getEditorType() {
+        return null;
     }
 
     @Override
@@ -197,10 +228,14 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
 
     private void requestFocusBackToTable(Node focusOwner) {
         // Request focus back to the table when the current focus owner has no parent anymore,
-        // which happens if subclasses remove their graphic.
+        // which happens if subclasses remove their graphic, or when it is the graphic that stays (e.g. a CheckBox).
         // Otherwise, we may steal focus from another node the user just clicked.
-        if (focusOwner == null || focusOwner.getScene() == null) {
+        if (focusOwner == null || focusOwner.getScene() == null || focusOwner == getGraphic()) {
             getTreeTableView().requestFocus();
         }
+    }
+
+    DoubleProperty fixedOverlapProperty() {
+        return fixedOverlap;
     }
 }

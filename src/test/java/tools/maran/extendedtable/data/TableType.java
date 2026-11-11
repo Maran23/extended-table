@@ -27,11 +27,15 @@ import tools.maran.extendedtable.filter.popup.FilterPopupControl;
 import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.tableview.ExtendedTableView;
 import tools.maran.extendedtable.tableview.column.AbstractFilterTableColumn;
+import tools.maran.extendedtable.tableview.cell.ComboBoxTableCell;
 import tools.maran.extendedtable.tableview.cell.ExtendedTableCell;
+import tools.maran.extendedtable.tableview.column.GenericTableColumn;
 import tools.maran.extendedtable.tableview.column.CheckBoxTableColumn;
 import tools.maran.extendedtable.tableview.column.StringTableColumn;
 import tools.maran.extendedtable.treetableview.ExtendedTreeTableView;
+import tools.maran.extendedtable.treetableview.cell.ComboBoxTreeTableCell;
 import tools.maran.extendedtable.treetableview.cell.ExtendedTreeTableCell;
+import tools.maran.extendedtable.treetableview.column.GenericTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.AbstractFilterTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.CheckBoxTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.StringTreeTableColumn;
@@ -77,6 +81,30 @@ public enum TableType {
             CheckBoxTableColumn<Row> column = new CheckBoxTableColumn<>();
             column.setReadFunction(row -> Boolean.valueOf(row.first()));
             column.setWriteFunction((row, value) -> row.setFirst(value.toString()));
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createComboBoxColumn(List<String> values) {
+            GenericTableColumn<Row, String> column = new GenericTableColumn<>() {
+                @Override
+                protected ExtendedTableCell<Row, String> createTableCell() {
+                    ComboBoxTableCell<Row, String> cell = new ComboBoxTableCell<>(
+                            FXCollections.observableArrayList(values));
+                    cell.setReadFunction(value -> value);
+                    return cell;
+                }
+            };
+            column.setReadFunction(Row::second);
+            column.setWriteFunction(Row::setSecond);
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createStringColumn() {
+            StringTableColumn<Row> column = new StringTableColumn<>();
+            column.setReadFunction(Row::first);
+            column.setWriteFunction(Row::setFirst);
             return column;
         }
 
@@ -134,6 +162,30 @@ public enum TableType {
         }
 
         @Override
+        public TableColumnBase<?, ?> createComboBoxColumn(List<String> values) {
+            GenericTreeTableColumn<Row, String> column = new GenericTreeTableColumn<>() {
+                @Override
+                protected ExtendedTreeTableCell<Row, String> createTreeTableCell() {
+                    ComboBoxTreeTableCell<Row, String> cell = new ComboBoxTreeTableCell<>(
+                            FXCollections.observableArrayList(values));
+                    cell.setReadFunction(value -> value);
+                    return cell;
+                }
+            };
+            column.setReadFunction(Row::second);
+            column.setWriteFunction(Row::setSecond);
+            return column;
+        }
+
+        @Override
+        public TableColumnBase<?, ?> createStringColumn() {
+            StringTreeTableColumn<Row> column = new StringTreeTableColumn<>();
+            column.setReadFunction(Row::first);
+            column.setWriteFunction(Row::setFirst);
+            return column;
+        }
+
+        @Override
         public Control createTable(List<TableColumnBase<?, ?>> columns, List<Row> rows) {
             ExtendedTreeTableView<Row> table = new ExtendedTreeTableView<>();
             table.setItems(FXCollections.observableArrayList(rows.stream().map(TreeItem::new).toList()));
@@ -155,6 +207,12 @@ public enum TableType {
 
     /// Creates a checkbox column, which reads and writes the first value of a [Row].
     public abstract TableColumnBase<?, ?> createCheckBoxColumn();
+
+    /// Creates an editable combobox column with the given values, which reads and writes the second value of a [Row].
+    public abstract TableColumnBase<?, ?> createComboBoxColumn(List<String> values);
+
+    /// Creates an editable string column, which reads and writes the first value of a [Row].
+    public abstract TableColumnBase<?, ?> createStringColumn();
 
     /// Creates a column with an [ExtendedTableCell] or [ExtendedTreeTableCell], which shows the given value and a
     /// graphic from the given factory in every non-empty cell.
@@ -206,6 +264,11 @@ public enum TableType {
         }
 
         @Override
+        public void addVisibleRow(int index, Row row) {
+            tableView.getItems().add(index, row);
+        }
+
+        @Override
         public void commitValue(int rowIndex, int columnIndex, String value) {
             TableColumn<Row, String> column = (TableColumn<Row, String>) tableView.getColumns().get(columnIndex);
             TablePosition<Row, String> position = new TablePosition<>(tableView, rowIndex, column);
@@ -250,6 +313,11 @@ public enum TableType {
         }
 
         @Override
+        public boolean isSortedBy(int columnIndex) {
+            return tableView.getSortOrder().contains(tableView.getColumns().get(columnIndex));
+        }
+
+        @Override
         public void moveColumn(int fromIndex, int toIndex) {
             List<TableColumn<Row, ?>> columns = new ArrayList<>(tableView.getColumns());
             columns.add(toIndex, columns.remove(fromIndex));
@@ -262,8 +330,18 @@ public enum TableType {
         }
 
         @Override
+        public void removeBackingRow(int index) {
+            tableView.getBackingItems().remove(index);
+        }
+
+        @Override
         public void removeBackingRow(Row row) {
             tableView.getBackingItems().removeIf(item -> item == row);
+        }
+
+        @Override
+        public void removeVisibleRow(Row row) {
+            tableView.getItems().removeIf(item -> item == row);
         }
 
         @Override
@@ -311,6 +389,19 @@ public enum TableType {
             FXCollections.sort(tableView.getBackingItems(), comparator);
         }
 
+        @Override
+        public void sortVisibleRows(Comparator<Row> comparator) {
+            tableView.getItems().sort(comparator);
+        }
+
+        @Override
+        public void sortDescendingBy(int columnIndex) {
+            TableColumn<Row, ?> column = tableView.getColumns().get(columnIndex);
+            column.setSortable(true);
+            column.setSortType(TableColumn.SortType.DESCENDING);
+            tableView.getSortOrder().setAll(column);
+        }
+
         private StringTableColumn<Row> createColumn(String text, Function<Row, String> readFunction,
                 BiConsumer<Row, String> writeFunction) {
             StringTableColumn<Row> column = new StringTableColumn<>(text);
@@ -334,6 +425,11 @@ public enum TableType {
         @Override
         public void addBackingRow(int index, Row row) {
             treeTableView.getBackingItems().add(index, new TreeItem<>(row));
+        }
+
+        @Override
+        public void addVisibleRow(int index, Row row) {
+            treeTableView.getRoot().getChildren().add(index, new TreeItem<>(row));
         }
 
         @Override
@@ -385,6 +481,11 @@ public enum TableType {
         }
 
         @Override
+        public boolean isSortedBy(int columnIndex) {
+            return treeTableView.getSortOrder().contains(treeTableView.getColumns().get(columnIndex));
+        }
+
+        @Override
         public void moveColumn(int fromIndex, int toIndex) {
             List<TreeTableColumn<Row, ?>> columns = new ArrayList<>(treeTableView.getColumns());
             columns.add(toIndex, columns.remove(fromIndex));
@@ -397,8 +498,18 @@ public enum TableType {
         }
 
         @Override
+        public void removeBackingRow(int index) {
+            treeTableView.getBackingItems().remove(index);
+        }
+
+        @Override
         public void removeBackingRow(Row row) {
             treeTableView.getBackingItems().removeIf(item -> item.getValue() == row);
+        }
+
+        @Override
+        public void removeVisibleRow(Row row) {
+            treeTableView.getRoot().getChildren().removeIf(item -> item.getValue() == row);
         }
 
         @Override
@@ -445,6 +556,19 @@ public enum TableType {
         @Override
         public void sortBackingRows(Comparator<Row> comparator) {
             FXCollections.sort(treeTableView.getBackingItems(), Comparator.comparing(TreeItem::getValue, comparator));
+        }
+
+        @Override
+        public void sortVisibleRows(Comparator<Row> comparator) {
+            treeTableView.getRoot().getChildren().sort(Comparator.comparing(TreeItem::getValue, comparator));
+        }
+
+        @Override
+        public void sortDescendingBy(int columnIndex) {
+            TreeTableColumn<Row, ?> column = treeTableView.getColumns().get(columnIndex);
+            column.setSortable(true);
+            column.setSortType(TreeTableColumn.SortType.DESCENDING);
+            treeTableView.getSortOrder().setAll(column);
         }
 
         private StringTreeTableColumn<Row> createColumn(String text, Function<Row, String> readFunction,

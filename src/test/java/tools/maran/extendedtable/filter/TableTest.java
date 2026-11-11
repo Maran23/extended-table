@@ -428,6 +428,46 @@ class TableTest extends FilterTableTestBase {
         assertEquals(List.of(rowA1T8, rowA1T8), getVisibleRows());
     }
 
+    @DisplayName("Sorting a filtered table with the same filtered out row multiple times keeps every row")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testSortingAFilteredTableWithTheSameFilteredOutRowMultipleTimesKeepsEveryRow(TableType tableType) {
+        showTable(tableType, List.of(rowB2T8, rowA1T8, rowA2T9, rowB2T8));
+        applyFilter(COLUMN_1, "A");
+
+        runOnFxThread(() -> fixture.sortDescendingBy(COLUMN_3));
+        resetAllFilters(COLUMN_1);
+
+        assertEquals(List.of(rowA2T9, rowB2T8, rowA1T8, rowB2T8), getBackingRows());
+        assertEquals(List.of(rowA2T9, rowB2T8, rowA1T8, rowB2T8), getVisibleRows());
+    }
+
+    @DisplayName("Removing the same backing row of a filtered table once keeps its other occurrence")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testRemovingTheSameBackingRowOfAFilteredTableOnceKeepsItsOtherOccurrence(TableType tableType) {
+        showTable(tableType, List.of(rowA1T8, rowB2T8, rowA1T8));
+        applyFilter(COLUMN_1, "A");
+
+        runOnFxThread(() -> fixture.removeBackingRow(2));
+
+        assertEquals(List.of(rowA1T8), getVisibleRows());
+        assertEquals(List.of(rowA1T8, rowB2T8), getBackingRows());
+    }
+
+    @DisplayName("Sorting the backing rows of a filtered table keeps the same row apart")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testSortingTheBackingRowsOfAFilteredTableKeepsTheSameRowApart(TableType tableType) {
+        showTable(tableType, List.of(rowA2T9, rowA1T8, rowA2T8, rowA1T8, rowB2T8));
+        applyFilter(COLUMN_1, "A");
+
+        runOnFxThread(() -> fixture.sortBackingRows(Comparator.comparing(Row::third)));
+
+        assertEquals(List.of(rowA1T8, rowA2T8, rowA1T8, rowA2T9), getVisibleRows());
+        assertEquals(List.of(rowA1T8, rowA2T8, rowA1T8, rowB2T8, rowA2T9), getBackingRows());
+    }
+
     @DisplayName("Filtering works again after a reset")
     @ParameterizedTest
     @EnumSource(TableType.class)
@@ -1035,6 +1075,97 @@ class TableTest extends FilterTableTestBase {
         assertTrue(isFiltered());
         assertEquals(List.of(rowA2T9, rowA1T9, rowA1T8, rowA2T8), getVisibleRows());
         assertEquals(List.of(rowA2T9, rowA1T9, rowB1T9, rowA1T8, rowA2T8, rowB2T8), getBackingRows());
+    }
+
+    @DisplayName("Filtering a sorted table keeps it sorted")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testFilteringASortedTableKeepsItSorted(TableType tableType) {
+        showTable(tableType);
+        runOnFxThread(() -> fixture.sortDescendingBy(COLUMN_3));
+
+        applyFilter(COLUMN_1, "A");
+
+        assertTrue(fixture.isSortedBy(COLUMN_3));
+        assertEquals(List.of(rowA2T9, rowA1T9, rowA1T8, rowA2T8), getVisibleRows());
+    }
+
+    @DisplayName("Sorting a filtered table keeps it sorted when the filter changes")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testSortingAFilteredTableKeepsItSortedWhenTheFilterChanges(TableType tableType) {
+        showTable(tableType);
+        applyFilter(COLUMN_1, "A");
+
+        runOnFxThread(() -> fixture.sortDescendingBy(COLUMN_3));
+        assertEquals(List.of(rowA2T9, rowA1T9, rowA1T8, rowA2T8), getVisibleRows());
+
+        applyFilter(COLUMN_2, "1");
+        assertEquals(List.of(rowA1T9, rowA1T8), getVisibleRows());
+
+        resetAllFilters(COLUMN_1);
+
+        assertTrue(fixture.isSortedBy(COLUMN_3));
+        assertEquals(List.of(rowA2T9, rowA1T9, rowB1T9, rowA1T8, rowA2T8, rowB2T8), getVisibleRows());
+        assertEquals(List.of(rowA2T9, rowA1T9, rowB1T9, rowA1T8, rowA2T8, rowB2T8), getBackingRows());
+    }
+
+    @DisplayName("Sorting the shown rows of a filtered table without a column keeps their order when the filter changes")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testSortingTheShownRowsOfAFilteredTableWithoutAColumnKeepsTheirOrder(TableType tableType) {
+        showTable(tableType);
+        applyFilter(COLUMN_1, "A");
+
+        runOnFxThread(() -> fixture.sortVisibleRows(Comparator.comparing(Row::third).reversed()));
+        assertEquals(List.of(rowA2T9, rowA1T9, rowA1T8, rowA2T8), getVisibleRows());
+
+        applyFilter(COLUMN_2, "1");
+        assertEquals(List.of(rowA1T9, rowA1T8), getVisibleRows());
+
+        resetAllFilters(COLUMN_1);
+
+        // The shown rows took the indices of the shown rows, while the filtered out rows stayed.
+        assertEquals(List.of(rowA2T9, rowA1T9, rowA1T8, rowB2T8, rowA2T8, rowB1T9), getVisibleRows());
+    }
+
+    @DisplayName("A row added after the same shown row multiple times is inserted after the occurrence before it")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testARowAddedAfterTheSameRowMultipleTimesIsInsertedAfterTheOccurrenceBeforeIt(TableType tableType) {
+        showTable(tableType, List.of(rowA1T8, rowB2T8, rowA1T8, rowB1T9));
+        applyFilter(COLUMN_1, "A");
+
+        runOnFxThread(() -> fixture.addVisibleRow(2, rowNewB3T7));
+
+        assertEquals(List.of(rowA1T8, rowA1T8, rowNewB3T7), getVisibleRows());
+        assertEquals(List.of(rowA1T8, rowB2T8, rowA1T8, rowNewB3T7, rowB1T9), getBackingRows());
+    }
+
+    @DisplayName("Adding and removing shown rows of a filtered table changes the backing rows")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testAddingAndRemovingShownRowsOfAFilteredTableChangesTheBackingRows(TableType tableType) {
+        Row rowC3T7 = new Row("C", "3", "T7");
+        Row rowC4T7 = new Row("C", "4", "T7");
+        showTable(tableType);
+        applyFilter(COLUMN_1, "B");
+
+        runOnFxThread(() -> {
+            fixture.addVisibleRow(1, rowC3T7);
+            fixture.addVisibleRow(0, rowC4T7);
+            fixture.removeVisibleRow(rowB2T8);
+        });
+
+        assertEquals(List.of(rowC4T7, rowC3T7, rowB1T9), getVisibleRows());
+        assertEquals(List.of(rowC4T7, rowA1T8, rowA2T8, rowA2T9, rowC3T7, rowA1T9, rowB1T9), getBackingRows());
+
+        // Applies the filters again, which only works when the filtered out rows were moved along.
+        applyFilter(COLUMN_3, "T9");
+        assertEquals(List.of(rowB1T9), getVisibleRows());
+
+        resetColumnFilter(COLUMN_3);
+        assertEquals(List.of(rowC4T7, rowC3T7, rowB1T9), getVisibleRows());
     }
 
     @DisplayName("A value no row has anymore loses its filter entry")

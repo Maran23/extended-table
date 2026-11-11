@@ -10,8 +10,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -119,13 +122,12 @@ public final class TableFilter<S> {
         return filtered != null && filtered.get();
     }
 
-    /// Applies the change of the items of the table to the backing items. While the table is filtered, the items may
-    /// only be sorted.
+    /// Applies the change of the items of the table to the backing items. While the table is filtered, removed items
+    /// are removed from the backing items, while added items are inserted after the item shown before them, or at the
+    /// start. Sorted items keep their order, see [#sortBackingItems()].
     ///
     /// @param change
     ///         the change of the items of the table
-    /// @throws IllegalStateException
-    ///         when the items were changed other than sorted while the table is filtered
     public void itemsChanged(Change<? extends S> change) {
         if (isInternalItemsChange) {
             return;
@@ -136,16 +138,38 @@ public final class TableFilter<S> {
             return;
         }
 
+        // The backing index of every item of the table before the change. Positions are used instead of the items, as
+        // the same item may be contained multiple times.
+        int[] backingIndices = shownBackingIndices();
+        BitSet removedItems = new BitSet();
+        NavigableMap<Integer, List<S>> addedItems = new TreeMap<>();
+        boolean sorted = false;
+        // The indices of a change are the ones after the previous changes, so they are shifted by their size delta.
+        int delta = 0;
         while (change.next()) {
-            // Permutation is okay since it is only sorting the items.
-            if (!change.wasPermutated()) {
-                throw new IllegalStateException("""
-                        The filtered items should not be changed (only sorting is allowed), instead the \
-                        backing items should be changed by using 'setItems(..)' or 'getBackingItems()'. \
-                        The backing items also can be restored via 'restoreBackingItems()'. \
-                        Then it is safe to manipulate the items as the underlying base are the unfiltered items again.
-                        """);
+            if (change.wasPermutated()) {
+                permutate(backingIndices, change);
+                sorted = true;
+                continue;
             }
+
+            int from = change.getFrom() - delta;
+            for (int i = 0; i < change.getRemovedSize(); i++) {
+                removedItems.set(backingIndices[from + i]);
+            }
+            if (change.wasAdded()) {
+                // Inserted after the item shown before them, or at the start.
+                int index = from == 0 ? 0 : backingIndices[from - 1] + 1;
+                addedItems.computeIfAbsent(index, _ -> new ArrayList<>()).addAll(change.getAddedSubList());
+            }
+            delta += change.getAddedSize() - change.getRemovedSize();
+        }
+
+        if (!removedItems.isEmpty() || !addedItems.isEmpty()) {
+            applyToBackingItems(removedItems, addedItems);
+        }
+        if (sorted) {
+            sortBackingItems();
         }
     }
 
@@ -189,13 +213,15 @@ public final class TableFilter<S> {
     /// @param items
     ///         the new items of the table
     public void setItems(List<S> items) {
+        // The items may be the backing items or the items of the table, which would be cleared when set to themselves.
+        List<S> newItems = new ArrayList<>(items);
         resetFilters();
 
         isInternalItemsChange = true;
-        itemsSetter.accept(items);
+        itemsSetter.accept(newItems);
         isInternalItemsChange = false;
 
-        setBackingItems(items);
+        setBackingItems(newItems);
     }
 
     /// Adds the items to the given set.
@@ -233,7 +259,7 @@ public final class TableFilter<S> {
     }
 
     /// Applies the change of the source to the target, which contained the same items as the source before.
-    private static <T> void applyChange(Change<? extends T> change, List<T> source, List<T> target) {
+    private static <T> void applyChange(Change<? extends T> change, List<T> source, ObservableList<T> target) {
         while (change.next()) {
             if (change.wasPermutated()) {
                 sortByOrderOf(target, source);
@@ -248,22 +274,39 @@ public final class TableFilter<S> {
         }
     }
 
+    /// Removes the removed items from the backing items and inserts the added items at their index, while the filtered
+    /// out items are moved along.
+    private void applyToBackingItems(BitSet removedItems, NavigableMap<Integer, List<S>> addedItems) {
+        List<S> backingItems = getBackingItems();
+        List<S> items = new ArrayList<>(backingItems.size());
+        int[] newIndices = new int[backingItems.size()];
+        Iterator<Entry<Integer, List<S>>> added = addedItems.entrySet().iterator();
+        Entry<Integer, List<S>> nextAdded = added.hasNext() ? added.next() : null;
+        for (int i = 0; i <= backingItems.size(); i++) {
+            if (nextAdded != null && nextAdded.getKey() == i) {
+                items.addAll(nextAdded.getValue());
+                nextAdded = added.hasNext() ? added.next() : null;
+            }
+            if (i < backingItems.size() && !removedItems.get(i)) {
+                newIndices[i] = items.size();
+                items.add(backingItems.get(i));
+            }
+        }
+
+        // Removed items are shown, so the filtered out items are never removed.
+        moveFilteredOutItems(newIndices, items.size());
+        setBackingItems(items);
+    }
+
     /// Shows all backing items which are not filtered out by any filtered column.
     private void applyFilters() {
-        BitSet allFilteredOutItems = new BitSet(getBackingItems().size());
-        filteredOutItems.values().forEach(allFilteredOutItems::or);
+        BitSet allFilteredOutItems = allFilteredOutItems();
         if (allFilteredOutItems.isEmpty()) {
             restoreBackingItems();
             return;
         }
 
-        List<S> items = new ArrayList<>(getBackingItems().size() - allFilteredOutItems.cardinality());
-        for (int i = allFilteredOutItems.nextClearBit(0); i < getBackingItems().size();
-             i = allFilteredOutItems.nextClearBit(i + 1)) {
-            items.add(getBackingItems().get(i));
-        }
-
-        showItems(items);
+        showItems(shownBackingItems(allFilteredOutItems));
         filteredImpl().set(true);
     }
 
@@ -275,7 +318,7 @@ public final class TableFilter<S> {
             return;
         }
 
-        List<S> items = table.getItems();
+        ObservableList<S> items = table.getItems();
         if (items == null) {
             return;
         }
@@ -291,6 +334,39 @@ public final class TableFilter<S> {
         onItemsChanged.run();
     }
 
+    /// Moves the backing indices of the items of the table along with their permutation.
+    private static void permutate(int[] backingIndices, Change<?> change) {
+        int[] permutated = backingIndices.clone();
+        for (int i = change.getFrom(); i < change.getTo(); i++) {
+            permutated[change.getPermutation(i)] = backingIndices[i];
+        }
+        System.arraycopy(permutated, 0, backingIndices, 0, backingIndices.length);
+    }
+
+    /// Returns the backing index of every item of the table, which are the backing items not filtered out.
+    private int[] shownBackingIndices() {
+        BitSet allFilteredOutItems = allFilteredOutItems();
+        int size = getBackingItems().size();
+        return IntStream.range(0, size).filter(i -> !allFilteredOutItems.get(i)).toArray();
+    }
+
+    /// Returns the backing items which are not filtered out.
+    private List<S> shownBackingItems(BitSet allFilteredOutItems) {
+        List<S> backingItems = getBackingItems();
+        List<S> items = new ArrayList<>(backingItems.size() - allFilteredOutItems.cardinality());
+        for (int i = allFilteredOutItems.nextClearBit(0); i < backingItems.size();
+             i = allFilteredOutItems.nextClearBit(i + 1)) {
+            items.add(backingItems.get(i));
+        }
+        return items;
+    }
+
+    private BitSet allFilteredOutItems() {
+        BitSet allFilteredOutItems = new BitSet(getBackingItems().size());
+        filteredOutItems.values().forEach(allFilteredOutItems::or);
+        return allFilteredOutItems;
+    }
+
     private ReadOnlyBooleanWrapper filteredImpl() {
         if (filtered == null) {
             filtered = new ReadOnlyBooleanWrapper(table, "filtered");
@@ -298,53 +374,67 @@ public final class TableFilter<S> {
         return filtered;
     }
 
-    private void handleFilteredChange(Change<? extends S> change, List<S> items) {
-        Set<S> removedItems = null;
+    /// Applies the change by position, as the same item may be contained multiple times. Only items which are removed
+    /// and added within the change are matched by identity, so they keep their visibility.
+    private void handleFilteredChange(Change<? extends S> change, ObservableList<S> items) {
+        BitSet allFilteredOutItems = allFilteredOutItems();
         Set<S> addedItems = null;
         Map<BitSet, Set<S>> removedFilteredOutItems = null;
-        boolean sort = false;
+        boolean permutated = false;
         while (change.next()) {
             int from = change.getFrom();
             if (change.wasPermutated()) {
                 permutateBitSet(change);
-                sort = true;
+                permutated = true;
                 continue;
             }
 
             List<? extends S> removed = change.getRemoved();
+            int shownFrom = from - allFilteredOutItems.get(0, from).cardinality();
+            int shownRemovedSize = removed.size() - allFilteredOutItems.get(from, from + removed.size()).cardinality();
+            items.subList(shownFrom, shownFrom + shownRemovedSize).clear();
+            items.addAll(shownFrom, change.getAddedSubList());
+
             if (change.wasRemoved()) {
-                removedItems = addItems(removedItems, removed);
                 removedFilteredOutItems = addRemovedFilteredOutItems(removedFilteredOutItems, removed, from);
             }
             if (change.wasAdded()) {
                 addedItems = addItems(addedItems, change.getAddedSubList());
-                sort = true;
             }
 
+            replace(allFilteredOutItems, from, removed.size(), change.getAddedSize());
             for (BitSet bits : filteredOutItems.values()) {
                 replace(bits, from, removed.size(), change.getAddedSize());
             }
         }
 
-        if (removedItems != null && addedItems != null) {
-            if (removedFilteredOutItems != null) {
-                restoreMovedFilteredOutItems(removedFilteredOutItems, addedItems, getBackingItems());
-            }
-            // Moved items stay where they are.
-            removedItems.removeIf(addedItems::remove);
+        if (removedFilteredOutItems != null && addedItems != null) {
+            restoreMovedFilteredOutItems(removedFilteredOutItems, addedItems, getBackingItems());
+            hideFilteredOutItems(items, allFilteredOutItems);
         }
 
-        if (removedItems != null) {
-            items.removeAll(removedItems);
+        if (permutated) {
+            sortByOrderOf(items, shownBackingItems(allFilteredOutItems()));
         }
-        if (addedItems != null) {
-            items.addAll(addedItems);
-        }
+    }
 
-        // Removing items never changes the order of the remaining ones.
-        if (sort) {
-            sortByOrderOf(items, getBackingItems());
+    /// Removes the shown items which are filtered out now, but were not before.
+    private void hideFilteredOutItems(ObservableList<S> items, BitSet previousFilteredOutItems) {
+        BitSet hiddenItems = allFilteredOutItems();
+        hiddenItems.andNot(previousFilteredOutItems);
+        // From the last one, so the shown index of the ones before stays the same.
+        for (int i = hiddenItems.length() - 1; i >= 0; i = hiddenItems.previousSetBit(i - 1)) {
+            items.remove(i - previousFilteredOutItems.get(0, i).cardinality());
         }
+    }
+
+    /// Returns the index of every item, which is the first one for an item contained multiple times.
+    private static <T> Map<T, Integer> indexMap(List<T> items) {
+        Map<T, Integer> indexMap = new IdentityHashMap<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            indexMap.putIfAbsent(items.get(i), i);
+        }
+        return indexMap;
     }
 
     private boolean isInTable(TableColumnBase<?, ?> column) {
@@ -352,6 +442,18 @@ public final class TableFilter<S> {
             column = column.getParentColumn();
         }
         return table.getColumns().contains(column);
+    }
+
+    /// Moves the filtered out items of every column to their new index.
+    private void moveFilteredOutItems(int[] newIndices, int size) {
+        for (Entry<FilterableColumn<S>, BitSet> entry : filteredOutItems.entrySet()) {
+            BitSet bits = entry.getValue();
+            BitSet newBits = new BitSet(size);
+            for (int i = bits.nextSetBit(0); i >= 0; i = bits.nextSetBit(i + 1)) {
+                newBits.set(newIndices[i]);
+            }
+            entry.setValue(newBits);
+        }
     }
 
     private static <T> Set<T> newIdentitySet(int expectedSize) {
@@ -450,6 +552,38 @@ public final class TableFilter<S> {
         onItemsChanged.run();
     }
 
+    /// Takes over the order of the sorted items of the table. The backing items are sorted by the comparator of the
+    /// table first, so the filtered out items are sorted as well. The shown items then take the indices of the shown
+    /// items in their order, as the table may sort them differently, e.g. with a custom sort policy or without any
+    /// comparator.
+    private void sortBackingItems() {
+        List<S> backingItems = getBackingItems();
+        List<S> items = new ArrayList<>(backingItems);
+        Comparator<S> comparator = table.getComparator();
+        if (comparator != null) {
+            // The indices are sorted instead of the items, as the same item may be contained multiple times.
+            List<Integer> order = new ArrayList<>(IntStream.range(0, items.size()).boxed().toList());
+            order.sort(Comparator.comparing(backingItems::get, comparator));
+
+            int[] newIndices = new int[items.size()];
+            for (int i = 0; i < order.size(); i++) {
+                items.set(i, backingItems.get(order.get(i)));
+                newIndices[order.get(i)] = i;
+            }
+            moveFilteredOutItems(newIndices, items.size());
+        }
+
+        BitSet allFilteredOutItems = allFilteredOutItems();
+        List<S> shownItems = table.getItems();
+        int shownIndex = 0;
+        for (int i = allFilteredOutItems.nextClearBit(0); i < items.size();
+             i = allFilteredOutItems.nextClearBit(i + 1)) {
+            items.set(i, shownItems.get(shownIndex++));
+        }
+
+        setBackingItems(items);
+    }
+
     private void showItems(List<S> items) {
         isInternalItemsChange = true;
         itemsSetter.accept(items);
@@ -458,11 +592,25 @@ public final class TableFilter<S> {
         onItemsChanged.run();
     }
 
-    private static <T> void sortByOrderOf(List<T> items, List<T> order) {
-        Map<T, Integer> indexMap = new IdentityHashMap<>(order.size());
-        for (int i = 0; i < order.size(); i++) {
-            indexMap.putIfAbsent(order.get(i), i);
+    /// Sorts the items into the order of the given items, which contain the same items. The same item at multiple
+    /// positions can not be sorted apart, so the items are replaced instead when sorting did not restore the order.
+    private static <T> void sortByOrderOf(ObservableList<T> items, List<T> order) {
+        if (isSameOrder(items, order)) {
+            return;
         }
-        items.sort(Comparator.comparingInt(indexMap::get));
+
+        items.sort(Comparator.comparingInt(indexMap(order)::get));
+        if (!isSameOrder(items, order)) {
+            items.setAll(order);
+        }
+    }
+
+    private static <T> boolean isSameOrder(List<T> items, List<T> order) {
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) != order.get(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -23,7 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 /// @author Marius Hanl
 public abstract class JavaFxTest {
 
-    private static final long TIMEOUT_SECONDS = 2;
+    private static final long TIMEOUT_SECONDS = 5;
 
     private static boolean toolkitStarted;
 

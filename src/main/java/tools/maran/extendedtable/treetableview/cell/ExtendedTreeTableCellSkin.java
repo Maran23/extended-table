@@ -10,6 +10,8 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
 
+import tools.maran.extendedtable.table.common.CellLayout;
+
 /// [TreeTableCellSkin] for the [ExtendedTreeTableCell].
 ///
 /// @param <S>
@@ -33,6 +35,7 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
         super(treeTableCell);
         this.treeTableCell = treeTableCell;
 
+        registerChangeListener(treeTableCell.fixedOverlapProperty(), _ -> updateClip());
         registerChangeListener(treeTableCell.editableProperty(), _ -> updateEditablePseudoClass());
         registerChangeListener(treeTableCell.getTableRow().editableProperty(), _ -> updateEditablePseudoClass());
         registerChangeListener(treeTableCell.getTableColumn().editableProperty(), _ -> updateEditablePseudoClass());
@@ -56,6 +59,8 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
         double newW = w - indentation;
 
         layoutLabelInArea(newX, y, newW, h);
+        CellLayout.layoutEditor(treeTableCell, indentation);
+        updateClip();
     }
 
     /// Copied from JavaFX, minimally adjusted to save the indentation in the column.
@@ -137,6 +142,10 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
             tableColumn.getProperties().put(INDENTATION, tableColIndent);
         }
         return tableColIndent;
+    }
+
+    private void updateClip() {
+        CellLayout.updateClip(treeTableCell, treeTableCell.getFixedOverlap());
     }
 
     private void updateEditablePseudoClass() {

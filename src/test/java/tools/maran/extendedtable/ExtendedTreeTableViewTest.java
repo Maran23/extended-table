@@ -1,14 +1,20 @@
 package tools.maran.extendedtable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.shape.Shape;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,6 +68,19 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
         });
     }
 
+    @DisplayName("Setting and restoring the items without a root keeps them as backing items")
+    @Test
+    void testSettingAndRestoringTheItemsWithoutARootKeepsThemAsBackingItems() {
+        runOnFxThread(() -> {
+            table.setRoot(null);
+
+            table.setItems(FXCollections.observableArrayList(List.of(itemA, itemB)));
+            table.restoreBackingItems();
+
+            assertEquals(List.of(itemA, itemB), table.getBackingItems());
+        });
+    }
+
     @DisplayName("Selecting the header checkbox selects all top level items, even when children are expanded")
     @Test
     void testHeaderCheckBoxSelectsAllTopLevelItems() {
@@ -107,8 +126,70 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
         });
     }
 
+    @DisplayName("The tree lines are in the cell of the tree column, so they stay with a fixed one while scrolled")
+    @Test
+    void testTreeLinesAreInTheTreeColumnCell() {
+        runOnFxThread(() -> {
+            StringTreeTableColumn<Row> scrolledColumn = new StringTreeTableColumn<>();
+            scrolledColumn.setReadFunction(Row::second);
+            scrolledColumn.setPrefWidth(500);
+            StringTreeTableColumn<Row> lastColumn = new StringTreeTableColumn<>();
+            lastColumn.setReadFunction(Row::second);
+            table.getColumns().addAll(List.of(scrolledColumn, lastColumn));
+            table.setShowTreeLines(true);
+            table.setFixedColumnCount(1);
+            showInStage(table, 300, 200);
+
+            table.scrollToColumn(lastColumn);
+            table.layout();
+
+            List<Node> treeLineDrawers = getTreeLineDrawers();
+            assertFalse(treeLineDrawers.isEmpty());
+            assertTrue(treeLineDrawers.stream()
+                    .allMatch(drawer -> ((TreeTableCell<?, ?>) drawer.getParent()).getTableColumn() == column));
+            assertTrue(treeLineDrawers.stream().allMatch(drawer -> drawer.getLayoutX() == 0));
+        });
+    }
+
+    @DisplayName("The tree lines take the text color of their selected cell")
+    @Test
+    void testTreeLinesTakeTheTextColorOfTheirSelectedCell() {
+        runOnFxThread(() -> {
+            table.setShowTreeLines(true);
+            table.getSelectionModel().setCellSelectionEnabled(true);
+            showInStage(table, 300, 200);
+            table.requestFocus();
+
+            table.getSelectionModel().select(1, column);
+            table.applyCss();
+            table.layout();
+
+            Shape drawer = (Shape) getTreeLineDrawers().stream()
+                    .filter(node -> ((TreeTableCell<?, ?>) node.getParent()).isSelected()).findFirst().orElseThrow();
+            assertEquals(((TreeTableCell<?, ?>) drawer.getParent()).getTextFill(), drawer.getStroke());
+        });
+    }
+
+    private List<Node> getTreeLineDrawers() {
+        return table.lookupAll(".tree-line-drawer").stream()
+                .filter(drawer -> ((TreeTableCell<?, ?>) drawer.getParent()).getTableRow().getTreeItem() != null)
+                .toList();
+    }
+
     private void assertAllTreeItems(List<TreeItem<Row>> treeItems) {
         assertEquals(treeItems.size(), table.getAllTreeItems().size());
         assertTrue(table.getAllTreeItems().containsAll(treeItems));
+    }
+
+    @DisplayName("Binding the items fails with a hint to bind the content of the backing items")
+    @Test
+    void testBindingTheItemsFails() {
+        runOnFxThread(() -> {
+            ExtendedTreeTableView<Row> table = new ExtendedTreeTableView<>();
+
+            UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
+                    () -> table.itemsProperty().bind(new SimpleObjectProperty<>(FXCollections.observableArrayList())));
+            assertTrue(exception.getMessage().contains("bindContent"));
+        });
     }
 }

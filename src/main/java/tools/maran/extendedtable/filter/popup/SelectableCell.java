@@ -1,7 +1,6 @@
 package tools.maran.extendedtable.filter.popup;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListCell;
 
@@ -18,7 +17,7 @@ public class SelectableCell<S> extends ListCell<SelectableItem<S>> {
 
     SelectableCell() {
         checkBox = new CheckBox();
-        checkBox.setAlignment(Pos.TOP_LEFT);
+        checkBox.setFocusTraversable(false);
 
         setOnMousePressed(_ -> selectCheckBox());
         setOnDragDetected(_ -> startDragging());

@@ -231,11 +231,12 @@ public abstract class FilterTableTestBase extends JavaFxTest {
         return TableI18N.message("count.selected", selected, all);
     }
 
-    /// Returns the text of the selection count label. It is the only label directly inside the filter popup.
+    /// Returns the text of the selection count label. It is the only label directly inside the content of the filter
+    /// popup.
     static String selectionText(FilterPopupControl<?> filterPopup) {
-        Parent filterBox = (Parent) filterPopup.getSkin().getNode();
+        Parent content = (Parent) filterPopup.getSkin().getNode().lookup(".content");
 
-        return filterBox.getChildrenUnmodifiable().stream().filter(Label.class::isInstance)
+        return content.getChildrenUnmodifiable().stream().filter(Label.class::isInstance)
                 .map(node -> ((Label) node).getText()).findFirst().orElseThrow();
     }
 

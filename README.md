@@ -19,6 +19,7 @@
     - [ExtendedTableView](#extendedtableview)
     - [ExtendedTreeTableView](#extendedtreetableview)
     - [Filter](#filter)
+    - [Styling](#styling)
 - [Sampler](#sampler)
 - [API and Motivation](#api-and-motivation)
 
@@ -67,6 +68,12 @@ Both tables can replace their JavaFX counterpart, the main difference being the 
 A read and a write function take the place of the cell value factory and commit, which is all that is needed for editing, validation and filtering.
 The second difference is the data model: `setItems(...)` sets the *backing items*, while `getItems()` only returns the
 rows currently visible, so items should be added or removed via `getBackingItems()` and all filters are dropped with `restoreBackingItems()`.
+The `itemsProperty()` must not be bound, as the table shows its own items to filter them. To keep the table in sync with
+another list, e.g. of a view model, bind the content of the backing items instead:
+
+```java
+Bindings.bindContent(tableView.getBackingItems(), viewModel.getPersons());
+```
 
 ### ExtendedTableView
 
@@ -153,6 +160,25 @@ firstName.setFilterPopupFactory(() -> {
     });
     return popupControl;
 });
+```
+
+### Styling
+
+The cells only set pseudo-classes, their colors are up to the application, as Modena has no color for them:
+
+- `:invalid` on a cell whose value fails the validator of its column
+- `:editable` on a cell that can be edited, i.e. its table, row, column and the cell itself are editable
+
+```css
+.table-cell:invalid,
+.tree-table-cell:invalid {
+    -fx-border-color: crimson;
+}
+
+.table-cell:editable,
+.tree-table-cell:editable {
+    -fx-font-weight: bold;
+}
 ```
 
 ## Sampler

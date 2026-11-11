@@ -1,9 +1,11 @@
 package tools.maran.extendedtable.treetableview.cell;
 
+import javafx.scene.Node;
 import javafx.scene.control.TextInputControl;
 import javafx.util.Callback;
 
 /// [ExtendedTreeTableCell] which shows a [TextInputControl] on edit.
+/// The cell has the `text-input-cell` style class, so the [TextInputControl] can fill the whole cell on edit.
 ///
 /// @param <S>
 ///         the source type
@@ -21,6 +23,7 @@ public abstract class GenericTextInputTreeTableCell<S, T> extends ExtendedTreeTa
     /// Creates a new [GenericTextInputTreeTableCell] instance.
     protected GenericTextInputTreeTableCell() {
         super();
+        getStyleClass().add("text-input-cell");
     }
 
     @Override
@@ -73,6 +76,11 @@ public abstract class GenericTextInputTreeTableCell<S, T> extends ExtendedTreeTa
     ///         the write function
     public final void setWriteFunction(Callback<String, T> writeFunction) {
         this.writeFunction = writeFunction;
+    }
+
+    @Override
+    protected Class<? extends Node> getEditorType() {
+        return TextInputControl.class;
     }
 
     @Override

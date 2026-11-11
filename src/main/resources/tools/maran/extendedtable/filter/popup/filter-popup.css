@@ -1,25 +1,30 @@
-/* Filter popup */
+/*
+ * Sensible defaults based on modena.css. If Modena changes, this might need an update.
+ * ---
+ * The box is a .context-menu as well, so it looks like the popups of the theme. The padding and spacing are on its
+ * content, as a theme stylesheet overrides the ones of the box.
+ */
+
 .filter-popup > .filter-box {
-    -fx-spacing: 0.333333em;
-    -fx-padding: 0.333333em;
-    /* Copied from combo-box popup. */
-    -fx-background-color:
-        linear-gradient(to bottom,
-            derive(-fx-color,-17%),
-            derive(-fx-color,-30%)
-        ),
-        -fx-control-inner-background;
-    -fx-background-insets: -1 -1 -1 -1, 0 0 0 0;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0.0, 0, 8);
+    -fx-padding: 0;
 }
 
-.filter-popup > .filter-box > .list-view {
+.filter-popup > .filter-box > .content {
+    -fx-spacing: 0.333333em;
+    -fx-padding: 0.333333em;
+}
+
+.filter-popup > .filter-box > .content > .list-view {
     -fx-pref-width: 33.333333em;
     -fx-pref-height: 20em;
 }
 
-.filter-popup > .filter-box > .header,
-.filter-popup > .filter-box > .footer,
-.filter-popup > .filter-box > .footer > .reset-buttons {
+.filter-popup > .filter-box > .content > .header {
+    -fx-alignment: center-left;
+}
+
+.filter-popup > .filter-box > .content > .header,
+.filter-popup > .filter-box > .content > .footer,
+.filter-popup > .filter-box > .content > .footer > .reset-buttons {
     -fx-spacing: 0.333333em;
 }

@@ -1,15 +1,20 @@
 package tools.maran.extendedtable.table.common;
 
 import java.util.Collection;
+import java.util.Comparator;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TableSelectionModel;
 
 import tools.maran.extendedtable.filter.FilterableColumn;
 
@@ -39,6 +44,14 @@ public interface ExtendedTable<S> {
         return (EventType<CommitEvent<S>>) COMMIT_EVENT;
     }
 
+    /// Edits the cell at the given row and column, if possible.
+    ///
+    /// @param row
+    ///         the row index
+    /// @param column
+    ///         the column, which must be a column of this table
+    void edit(int row, TableColumnBase<S, ?> column);
+
     /// Returns the editing property.
     ///
     /// @return the editing property
@@ -57,6 +70,11 @@ public interface ExtendedTable<S> {
     /// @throws IllegalArgumentException
     ///         when a filtered item is not inside the backing items
     void filter(FilterableColumn<S> column, Collection<S> filteredItems);
+
+    /// Returns the comparator the items are sorted by, or null when they are not sorted.
+    ///
+    /// @return the comparator the items are sorted by, may be null
+    Comparator<S> getComparator();
 
     /// Returns the backing items [ObservableList]. The last items set via [#setItems(ObservableList)] are
     /// considered the 'backing' items.
@@ -77,6 +95,16 @@ public interface ExtendedTable<S> {
     /// @return the fixed cell size, or a value of 0 or smaller when no fixed cell size is used
     double getFixedCellSize();
 
+    /// Returns the focus model of this table.
+    ///
+    /// @return the focus model
+    TableFocusModel<S, ?> getFocusModel();
+
+    /// Returns the column of the focused cell.
+    ///
+    /// @return the column of the focused cell, or null when only a row or nothing is focused
+    TableColumnBase<S, ?> getFocusedColumn();
+
     /// Returns a list of all buttons that should be shown in the table header.
     ///
     /// @return a list containing all buttons currently in the table header, and allowing for further buttons to be
@@ -92,6 +120,21 @@ public interface ExtendedTable<S> {
     ///
     /// @return the current underlying data model
     ObservableList<S> getItems();
+
+    /// Returns the properties of this table.
+    ///
+    /// @return the properties
+    ObservableMap<Object, Object> getProperties();
+
+    /// Returns the selection model of this table.
+    ///
+    /// @return the selection model
+    TableSelectionModel<S> getSelectionModel();
+
+    /// Returns the scene of this table.
+    ///
+    /// @return the scene, may be null
+    Scene getScene();
 
     /// Returns the visible leaf columns of this table.
     ///
@@ -112,6 +155,11 @@ public interface ExtendedTable<S> {
     ///
     /// @return true, when this table is considered filtered, false otherwise
     boolean isFiltered();
+
+    /// Returns true, when this table itself has the keyboard focus, false otherwise.
+    ///
+    /// @return true, when this table itself has the keyboard focus, false otherwise
+    boolean isFocused();
 
     /// Returns true, when the header is shown. False otherwise.
     ///
@@ -148,6 +196,18 @@ public interface ExtendedTable<S> {
 
     /// Restores the underlying data model (backing items) which was last set via [#setItems(ObservableList)].
     void restoreBackingItems();
+
+    /// Scrolls as little as possible, so that the row at the given index is fully visible.
+    ///
+    /// @param index
+    ///         the row index
+    void scrollIntoView(int index);
+
+    /// Scrolls horizontally, so that the given column is visible.
+    ///
+    /// @param column
+    ///         the column, which must be a column of this table
+    void scrollToColumn(TableColumnBase<S, ?> column);
 
     /// Sets, whether the table is currently considered to be in editing mode.
     ///

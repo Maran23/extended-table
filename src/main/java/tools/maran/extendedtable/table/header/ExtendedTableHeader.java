@@ -6,7 +6,6 @@ import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -122,7 +121,6 @@ public class ExtendedTableHeader extends HBox {
         buttonBox = new HBox();
         buttonBox.getStyleClass().add(BUTTON_BOX_STYLE_CLASS);
         buttonBox.setMaxHeight(Double.MAX_VALUE);
-        buttonBox.setAlignment(Pos.CENTER_RIGHT);
     }
 
     private void setUpHeaderLabel() {
@@ -130,7 +128,6 @@ public class ExtendedTableHeader extends HBox {
         headerLabel.setMinWidth(Region.USE_PREF_SIZE);
         headerLabel.setMaxWidth(Double.MAX_VALUE);
         headerLabel.setMaxHeight(Double.MAX_VALUE);
-        headerLabel.setAlignment(Pos.CENTER_LEFT);
     }
 
     private void updateCounter() {

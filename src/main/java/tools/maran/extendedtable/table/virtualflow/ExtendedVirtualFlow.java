@@ -30,6 +30,45 @@ public class ExtendedVirtualFlow<S extends IndexedCell<?>> extends VirtualFlow<S
         return getHbar().getValue();
     }
 
+    /// Scrolls as little as possible, so that the cell at the given index is fully visible and exists right away.
+    /// Only lays out when the scroll could not create the cell, e.g. for a far away index.
+    ///
+    /// @param index
+    ///         the index of the cell
+    public void scrollIntoView(int index) {
+        scrollTo(index);
+
+        if (getVisibleCell(index) == null) {
+            layout();
+        }
+    }
+
+    /// Scrolls horizontally as little as possible, so that the given range of the scrollable content is fully visible.
+    /// The scrollable content starts after the fixed columns, which always stay visible in front of it.
+    ///
+    /// @param start
+    ///         the start of the range, relative to the scrollable content
+    /// @param width
+    ///         the width of the range
+    /// @param fixedWidth
+    ///         the width of the fixed columns
+    public void scrollHorizontallyIntoView(double start, double width, double fixedWidth) {
+        ScrollBar vbar = getVbar();
+        double viewportWidth = getWidth() - fixedWidth - (vbar.isVisible() ? vbar.getWidth() : 0);
+        ScrollBar hbar = getHbar();
+        double pos = hbar.getValue();
+
+        double newPos;
+        if (start < pos || width > viewportWidth) {
+            newPos = start;
+        } else if (start + width > pos + viewportWidth) {
+            newPos = start + width - viewportWidth;
+        } else {
+            return;
+        }
+        hbar.setValue(Math.clamp(newPos, 0, hbar.getMax()));
+    }
+
     @Override
     public void requestCellLayout() {
         super.requestCellLayout();
