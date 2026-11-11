@@ -1,7 +1,9 @@
 package tools.maran.extendedtable.treetableview.cell;
 
 import javafx.css.PseudoClass;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -9,6 +11,10 @@ import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
+import javafx.scene.layout.Region;
+import javafx.scene.shape.Rectangle;
+
+import tools.maran.extendedtable.table.common.CellComboBox;
 
 /// [TreeTableCellSkin] for the [ExtendedTreeTableCell].
 ///
@@ -33,6 +39,7 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
         super(treeTableCell);
         this.treeTableCell = treeTableCell;
 
+        registerChangeListener(treeTableCell.fixedOverlapProperty(), _ -> updateClip());
         registerChangeListener(treeTableCell.editableProperty(), _ -> updateEditablePseudoClass());
         registerChangeListener(treeTableCell.getTableRow().editableProperty(), _ -> updateEditablePseudoClass());
         registerChangeListener(treeTableCell.getTableColumn().editableProperty(), _ -> updateEditablePseudoClass());
@@ -56,6 +63,8 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
         double newW = w - indentation;
 
         layoutLabelInArea(newX, y, newW, h);
+        layoutEditor(indentation);
+        updateClip();
     }
 
     /// Copied from JavaFX, minimally adjusted to save the indentation in the column.
@@ -137,6 +146,53 @@ public class ExtendedTreeTableCellSkin<S, T> extends TreeTableCellSkin<S, T> {
             tableColumn.getProperties().put(INDENTATION, tableColIndent);
         }
         return tableColIndent;
+    }
+
+    /// While editing, the editor fills the cell from the given x with the side insets of the cell as its padding, so its
+    /// text stays in place. It draws the editing ring, as a theme may style the background of the cell, e.g. when
+    /// selected. Its text is centered vertically, so the height of the row stays.
+    private void layoutEditor(double x) {
+        Node graphic = treeTableCell.getGraphic();
+        if (!(graphic instanceof TextInputControl || graphic instanceof CellComboBox<?>)) {
+            return;
+        }
+
+        Region editor = (Region) graphic;
+        boolean isEditing = treeTableCell.isEditing();
+        Insets padding = isEditing ? new Insets(0, treeTableCell.snappedRightInset(), 0, treeTableCell.snappedLeftInset()) : Insets.EMPTY;
+        if (!padding.equals(editor.getPadding())) {
+            editor.setPadding(padding);
+        }
+        if (isEditing) {
+            editor.resizeRelocate(x, 0, treeTableCell.getWidth() - x, treeTableCell.getHeight());
+        }
+    }
+
+    /// Clips the part of the cell which is overlapped by the fixed cells. The [Rectangle] clip of the super skin is
+    /// reused: its width is unbound while overlapped and bound to the cell again afterwards.
+    private void updateClip() {
+        double overlap = treeTableCell.getFixedOverlap();
+        Rectangle clip = treeTableCell.getClip() instanceof Rectangle rectangle ? rectangle : null;
+        if (clip == null) {
+            if (overlap == 0) {
+                return;
+            }
+            clip = new Rectangle();
+            clip.heightProperty().bind(treeTableCell.heightProperty());
+            treeTableCell.setClip(clip);
+        }
+
+        if (overlap == 0) {
+            if (!clip.widthProperty().isBound()) {
+                clip.setX(0);
+                clip.widthProperty().bind(treeTableCell.widthProperty());
+            }
+            return;
+        }
+
+        clip.widthProperty().unbind();
+        clip.setX(overlap);
+        clip.setWidth(Math.max(0, treeTableCell.getWidth() - overlap));
     }
 
     private void updateEditablePseudoClass() {

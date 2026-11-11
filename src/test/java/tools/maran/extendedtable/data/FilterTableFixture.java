@@ -15,6 +15,8 @@ public interface FilterTableFixture {
 
     void addBackingRow(int index, Row row);
 
+    void addVisibleRow(int index, Row row);
+
     /// Commits the value like the table does when a user finishes editing a cell.
     void commitValue(int rowIndex, int columnIndex, String value);
 
@@ -33,11 +35,16 @@ public interface FilterTableFixture {
 
     boolean isFiltered();
 
+    /// Returns true, when the table is sorted by the column.
+    boolean isSortedBy(int columnIndex);
+
     void moveColumn(int fromIndex, int toIndex);
 
     void refreshFilter(int columnIndex);
 
     void removeBackingRow(Row row);
+
+    void removeVisibleRow(Row row);
 
     void removeColumn(int columnIndex);
 
@@ -53,5 +60,11 @@ public interface FilterTableFixture {
     void setRows(List<Row> rows);
 
     void sortBackingRows(Comparator<Row> comparator);
+
+    /// Sorts the shown rows in code, without sorting the table by a column.
+    void sortVisibleRows(Comparator<Row> comparator);
+
+    /// Sorts the table descending by the column, like a user does by clicking on its header.
+    void sortDescendingBy(int columnIndex);
 
 }

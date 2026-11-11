@@ -11,6 +11,7 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.MapChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -52,14 +53,11 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
         ObservableMap<Object, Object> properties = tableView.getProperties();
         properties.addListener(propertiesMapListener);
 
-        Skin<?> skin = tableView.getSkin();
-        if (skin instanceof ExtendedTableViewSkin<?> extendedTableViewSkin) {
+        if (tableView instanceof ExtendedTableView<S> extendedTableView) {
             // Request layout so the fixed cells will be removed/added.
-            registerChangeListener(extendedTableViewSkin.fixedColumnCountProperty(),
-                    _ -> getSkinnable().requestLayout());
+            registerChangeListener(extendedTableView.fixedColumnCountProperty(), _ -> getSkinnable().requestLayout());
             // Request layout so the cell size is recalculated.
-            registerChangeListener(extendedTableViewSkin.cellSizeProviderProperty(),
-                    _ -> getSkinnable().requestLayout());
+            registerChangeListener(extendedTableView.cellSizeProviderProperty(), _ -> getSkinnable().requestLayout());
         }
     }
 
@@ -80,19 +78,22 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
     @Override
     protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     @Override
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     @Override
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     // Raw type, as declared by JavaFX.
@@ -118,11 +119,7 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
 
         Skin<?> skin = tableView.getSkin();
         if (skin instanceof ExtendedTableViewSkin<?> extendedTableViewSkin) {
-            int fixedColumnCount = extendedTableViewSkin.getFixedColumnCount();
-            if (fixedColumnCount > 0) {
-                double hScrollValue = extendedTableViewSkin.getHBarValue();
-                layoutFixedCells(x, y, fixedColumnCount, hScrollValue);
-            }
+            layoutFixedCells(x, y, extendedTableViewSkin.getFixedColumnCount(), extendedTableViewSkin.getHBarValue());
         }
     }
 
@@ -162,6 +159,7 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
         return topMostColumn;
     }
 
+    /// Lays out the fixed cells over the scrolled cells and sets how much of every scrolled cell they overlap.
     private void layoutFixedCells(double x, double y, int fixedColumnCount, double hScrollValue) {
         TableView<S> tableView = getSkinnable().getTableView();
         double fixedCellSize = tableView.getFixedCellSize();
@@ -194,6 +192,8 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
             boolean differentTopMostColumn = currentTopMostColumn != previousTopMostColumn;
             if (fixedColumnCounter <= 0 && differentTopMostColumn) {
                 tableCell.getStyleClass().remove(FIXED_TABLE_CELL);
+                // The fixed cells come first, so they all are laid out at this point.
+                setFixedOverlap(tableCell, fixedColumnCount > 0 ? Math.max(0, newX - tableCell.getLayoutX()) : 0);
                 continue;
             }
 
@@ -206,6 +206,7 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
             if (!tableCell.getStyleClass().contains(FIXED_TABLE_CELL)) {
                 tableCell.getStyleClass().add(FIXED_TABLE_CELL);
             }
+            setFixedOverlap(tableCell, 0);
 
             previousTopMostColumn = currentTopMostColumn;
 
@@ -235,6 +236,14 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
 
                 newX = snapPositionX(newX + widthCol);
             }
+        }
+
+    }
+
+    /// Sets the width of the cell which is overlapped by the fixed cells, so that part is clipped.
+    private static void setFixedOverlap(TableCell<?, ?> tableCell, double width) {
+        if (tableCell instanceof ExtendedTableCell<?, ?> cell) {
+            cell.setFixedOverlap(width);
         }
     }
 

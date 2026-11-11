@@ -1,31 +1,24 @@
 package tools.maran.extendedtable.treetableview.line;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import javafx.collections.ObservableList;
-import javafx.css.CssMetaData;
-import javafx.css.Styleable;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
-import javafx.css.converter.PaintConverter;
-import javafx.css.converter.SizeConverter;
 import javafx.scene.Node;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TreeItem;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.stage.Window;
 
-/// [Canvas] responsible for drawing tree lines for a given [TreeLineDrawable].
+/// [Path] responsible for drawing tree lines for a given [TreeLineDrawable].
+/// The lines are snapped to the physical pixels of the render scale, so they stay sharp on every screen.
+/// The line width is set with `-fx-stroke-width`.
 ///
 /// @author Marius Hanl
-public class TreeLineDrawer extends Canvas {
-
-    private StyleableObjectProperty<Paint> stroke;
-    private StyleableDoubleProperty size;
+public class TreeLineDrawer extends Path {
 
     private final TreeLineDrawable treeLineDrawable;
 
@@ -35,16 +28,15 @@ public class TreeLineDrawer extends Canvas {
     ///         the object where the tree lines will be drawn to
     public TreeLineDrawer(TreeLineDrawable treeLineDrawable) {
         this.treeLineDrawable = treeLineDrawable;
+        setManaged(false);
         setMouseTransparent(true);
+        setStrokeLineCap(StrokeLineCap.BUTT);
         getStyleClass().add("tree-line-drawer");
-
-        getGraphicsContext2D().setStroke(getStroke());
-        getGraphicsContext2D().setLineWidth(getSize());
     }
 
     /// Clears the tree lines.
     public void clear() {
-        getGraphicsContext2D().clearRect(0, 0, getWidth(), getHeight());
+        getElements().clear();
     }
 
     /// Draws the tree lines.
@@ -54,19 +46,26 @@ public class TreeLineDrawer extends Canvas {
             return;
         }
 
-        GraphicsContext graphicsContext = getGraphicsContext2D();
+        Window window = getScene() == null ? null : getScene().getWindow();
+        double scaleX = window == null ? 1 : window.getRenderScaleX();
+        double scaleY = window == null ? 1 : window.getRenderScaleY();
+
+        // Line width in physical pixels.
+        double lineWidth = Math.max(1, Math.round(getStrokeWidth() * scaleX));
+
+        double width = treeLineDrawable.getCellWidth();
+        double height = treeLineDrawable.getCellHeight();
 
         int treeItemLevel = treeLineDrawable.getTreeItemLevel(treeItem);
         double indentation = treeLineDrawable.getIndent();
-
-        setWidth(treeLineDrawable.getCellWidth());
-        setHeight(treeLineDrawable.getCellHeight());
 
         // Base indentation
         final double baseIndent = indentation;
 
         // Indent offset
         double indentOffset = 0;
+
+        List<PathElement> elements = new ArrayList<>();
 
         // Loop through all indented level (from inside to outside)
         boolean[] levelToDraw = getLevelToDraw(treeItemLevel);
@@ -96,155 +95,66 @@ public class TreeLineDrawer extends Canvas {
             treeItemLevel = treeLineDrawable.getTreeItemLevel(treeItem);
 
             // X coordinate of the starting point.
-            double startX = snap(indentation * treeItemLevel - indentOffset) - 1;
+            double startX = snap(indentation * treeItemLevel - indentOffset - 1, scaleX, lineWidth);
+
+            // Lines outside the cell are not visible.
+            if (startX > width) {
+                treeItem = treeItem.getParent();
+                continue;
+            }
 
             // Every other level than 0 will just need a plain vertical line: |
             if (level != 0) {
                 // Vertical line over the whole cell.
-                graphicsContext.strokeLine(startX, 0, startX, snap(getHeight()));
+                addLine(elements, startX, 0, startX, height);
             } else {
                 // The line for the innermost tree item (level 0) should either look like this: '- or |-
                 ObservableList<? extends TreeItem<?>> children = treeItem.getParent().getChildren();
                 boolean isLastChild = children.getLast() == treeItem;
 
                 // Y coordinate of the mid of this cell.
-                double yCellMid = snap(getHeight() / 2);
+                double yCellMid = snap(height / 2, scaleY, lineWidth);
 
                 boolean isDisclosureNodeVisible = disclosureNode != null && disclosureNode.isVisible();
 
                 double lineWidthMultiplier = isDisclosureNodeVisible ? 0.5 : 1;
-                double endX = startX + lineWidthMultiplier * baseIndent;
+                double endX = Math.min(width, Math.round((startX + lineWidthMultiplier * baseIndent) * scaleX) / scaleX);
 
                 if (isLastChild) {
                     // When this tree item is the last child, the line should look like this: '-
-
-                    // Vertical line to the mid y of the cell since this is the last child.
-                    graphicsContext.strokeLine(startX, 0, startX, yCellMid);
+                    // The vertical line goes until the bottom edge of the horizontal line to close the corner.
+                    addLine(elements, startX, 0, startX, yCellMid + lineWidth / scaleY / 2);
                 } else {
                     // Otherwise, it should look like this: |-
-
-                    // Vertical line over the whole cell.
-                    graphicsContext.strokeLine(startX, 0, startX, snap(getHeight()));
+                    addLine(elements, startX, 0, startX, height);
                 }
                 // Horizontal line to the before calculated end x coordinate.
-                graphicsContext.strokeLine(startX, yCellMid, endX, yCellMid);
+                addLine(elements, startX, yCellMid, endX, yCellMid);
             }
             treeItem = treeItem.getParent();
         }
+
+        getElements().setAll(elements);
     }
 
-    /// Gets the `CssMetaData` associated with this class, which may include the `CssMetaData` of its
-    /// superclasses.
-    ///
-    /// @return the `CssMetaData`
-    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return StyleableProperties.STYLEABLES;
-    }
-
-    /// This method returns a list of [CssMetaData] for this component.
-    ///
-    /// @return The [CssMetaData] associated with this node, which may include the CssMetaData of its superclasses
-    @Override
-    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
-        return getClassCssMetaData();
-    }
-
-    /// Gets the size.
-    ///
-    /// @return the size
-    public final double getSize() {
-        return size == null ? 1 : sizeProperty().get();
-    }
-
-    /// Gets the stroke.
-    ///
-    /// @return the stroke
-    public final Paint getStroke() {
-        return stroke == null ? Color.BLACK : strokeProperty().get();
-    }
-
-    /// Sets the size.
+    /// Snaps the given coordinate to the physical pixel grid, so that a line with the given physical width is drawn
+    /// sharp. Odd widths are centered on a physical pixel.
     ///
     /// @param value
-    ///         the size
-    public final void setSize(double value) {
-        sizeProperty().set(value);
+    ///         the coordinate
+    /// @param scale
+    ///         the render scale
+    /// @param lineWidth
+    ///         the line width in physical pixels
+    /// @return the snapped coordinate
+    static double snap(double value, double scale, double lineWidth) {
+        double physical = Math.floor(value * scale);
+        return (lineWidth % 2 == 0 ? physical : physical + 0.5) / scale;
     }
 
-    /// Sets the stroke.
-    ///
-    /// @param value
-    ///         the stroke
-    public final void setStroke(Paint value) {
-        strokeProperty().set(value);
-    }
-
-    /// Property with the size used for the lines.
-    ///
-    /// Can be set in CSS with `-fx-size`.
-    ///
-    /// @return the [StyleableDoubleProperty] with the size
-    /// @defaultValue 1
-    public final StyleableDoubleProperty sizeProperty() {
-        if (size == null) {
-            size = new StyleableDoubleProperty(1) {
-
-                @Override
-                public Object getBean() {
-                    return TreeLineDrawer.this;
-                }
-
-                @Override
-                public CssMetaData<TreeLineDrawer, Number> getCssMetaData() {
-                    return StyleableProperties.SIZE;
-                }
-
-                @Override
-                public String getName() {
-                    return "size";
-                }
-
-                @Override
-                protected void invalidated() {
-                    getGraphicsContext2D().setLineWidth(getSize());
-                }
-            };
-        }
-        return size;
-    }
-
-    /// Property with the [Paint] used for the lines.
-    ///
-    /// Can be set in CSS with `-fx-stroke`.
-    ///
-    /// @return the [StyleableObjectProperty] with the [Paint]
-    /// @defaultValue black
-    public final StyleableObjectProperty<Paint> strokeProperty() {
-        if (stroke == null) {
-            stroke = new StyleableObjectProperty<>(Color.BLACK) {
-
-                @Override
-                public Object getBean() {
-                    return TreeLineDrawer.this;
-                }
-
-                @Override
-                public CssMetaData<TreeLineDrawer, Paint> getCssMetaData() {
-                    return StyleableProperties.STROKE;
-                }
-
-                @Override
-                public String getName() {
-                    return "stroke";
-                }
-
-                @Override
-                protected void invalidated() {
-                    getGraphicsContext2D().setStroke(getStroke());
-                }
-            };
-        }
-        return stroke;
+    private static void addLine(List<PathElement> elements, double startX, double startY, double endX, double endY) {
+        elements.add(new MoveTo(startX, startY));
+        elements.add(new LineTo(endX, endY));
     }
 
     /// Gets all levels where a line should be drawn. If the corresponding value is true, a line should be drawn to it.
@@ -271,62 +181,6 @@ public class TreeLineDrawer extends Canvas {
             indention++;
         }
         return indentedLines;
-    }
-
-    /// Snaps the given input to the center if it is an odd number. This enables the canvas to draw sharp lines when
-    /// an integer size is used.
-    ///
-    /// @param input
-    ///         the input
-    /// @return the snapped input
-    private double snap(double input) {
-        if (getGraphicsContext2D().getLineWidth() % 2 == 0) {
-            return input;
-        }
-        // Odd numbers needs to be snapped to the center coordinate (+0.5).
-        return ((int) input) + 0.5;
-    }
-
-    /// Styleable properties for the [TreeLineDrawer].
-    ///
-    /// @author Marius Hanl
-    private static class StyleableProperties {
-
-        private static final CssMetaData<TreeLineDrawer, Paint> STROKE = new CssMetaData<>("-fx-stroke",
-                PaintConverter.getInstance(), Color.BLACK) {
-
-            @Override
-            public StyleableProperty<Paint> getStyleableProperty(TreeLineDrawer treeLineDrawer) {
-                return treeLineDrawer.strokeProperty();
-            }
-
-            @Override
-            public boolean isSettable(TreeLineDrawer treeLineDrawer) {
-                return treeLineDrawer.stroke == null || !treeLineDrawer.stroke.isBound();
-            }
-        };
-        private static final CssMetaData<TreeLineDrawer, Number> SIZE = new CssMetaData<>("-fx-size",
-                SizeConverter.getInstance(), 1) {
-
-            @Override
-            public StyleableProperty<Number> getStyleableProperty(TreeLineDrawer treeLineDrawer) {
-                return treeLineDrawer.sizeProperty();
-            }
-
-            @Override
-            public boolean isSettable(TreeLineDrawer treeLineDrawer) {
-                return treeLineDrawer.size == null || !treeLineDrawer.size.isBound();
-            }
-        };
-
-        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-
-        static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Canvas.getClassCssMetaData());
-            styleables.add(STROKE);
-            styleables.add(SIZE);
-            STYLEABLES = Collections.unmodifiableList(styleables);
-        }
     }
 
 }

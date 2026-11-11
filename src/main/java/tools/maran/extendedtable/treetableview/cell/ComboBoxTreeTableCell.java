@@ -2,17 +2,20 @@ package tools.maran.extendedtable.treetableview.cell;
 
 import javafx.beans.binding.Bindings;
 import javafx.collections.ObservableList;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
-import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.control.ListCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
-/// [ExtendedTreeTableCell] which shows a [ComboBox] on edit.
+import tools.maran.extendedtable.table.common.CellComboBox;
+
+/// [ExtendedTreeTableCell] which always shows a [ComboBox].
+/// The [CellComboBox] only shows its text and arrow. The cell has the `combo-box-cell` style class.
+/// Every edit, e.g. by click, ENTER, F2 or TAB, opens the popup.
+/// Like a text input, a cancel from outside (e.g. TAB to the next cell) commits the current value.
 ///
 /// @param <S>
 ///         the source type
@@ -35,7 +38,29 @@ public class ComboBoxTreeTableCell<S, T> extends ExtendedTreeTableCell<S, T> {
     public ComboBoxTreeTableCell(ObservableList<T> items) {
         this.items = items;
         setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        setAlignment(Pos.CENTER);
+        getStyleClass().add("combo-box-cell");
+    }
+
+    @Override
+    public void cancelEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        if (!isCancelEdit) {
+            commitCurrentComboBoxValue();
+            return;
+        }
+
+        isCancelEdit = false;
+        super.cancelEdit();
+        comboBox.hide();
+    }
+
+    @Override
+    public void commitEdit(T newValue) {
+        super.commitEdit(newValue);
+        comboBox.hide();
     }
 
     /// Sets the read function which transforms the cell value into the text shown in the [ComboBox].
@@ -46,13 +71,35 @@ public class ComboBoxTreeTableCell<S, T> extends ExtendedTreeTableCell<S, T> {
         this.readFunction = readFunction;
     }
 
-    /// Creates the [ComboBox] which is shown when this cell is edited.
+    @Override
+    public void startEdit() {
+        if (isEditing()) {
+            return;
+        }
+
+        super.startEdit();
+
+        if (isEditing()) {
+            comboBox.requestFocus();
+            comboBox.show();
+        }
+    }
+
+    /// Creates the [ComboBox] which is shown in this cell.
     ///
     /// @return the newly created [ComboBox]
     protected ComboBox<T> createComboBox() {
-        ComboBox<T> cbx = new ComboBox<>(items);
-        cbx.setSkin(createComboBoxSkin(cbx));
-        cbx.getProperties().put("comboBoxRowsToMeasureWidth", 30);
+        ComboBox<T> cbx = new CellComboBox<>(items);
+
+        ListCell<T> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : readValue(item));
+            }
+        };
+        buttonCell.getStyleClass().setAll("cell-combo-box-text");
+        cbx.setButtonCell(buttonCell);
 
         cbx.setConverter(new StringConverter<>() {
 
@@ -69,12 +116,22 @@ public class ComboBoxTreeTableCell<S, T> extends ExtendedTreeTableCell<S, T> {
 
         cbx.setOnShowing(_ -> startEdit());
 
-        cbx.setOnHidden(_ -> {
-            if (isCancelEdit) {
-                cancelEdit();
-                isCancelEdit = false;
-            } else {
+        cbx.setOnHidden(_ -> commitCurrentComboBoxValue());
+
+        cbx.focusedProperty().addListener(_ -> {
+            if (!cbx.isFocused() && !cbx.isShowing()) {
                 commitCurrentComboBoxValue();
+            }
+        });
+
+        cbx.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
+                isCancelEdit = true;
+                cancelEdit();
+                e.consume();
+            } else if (e.getCode() == KeyCode.ENTER) {
+                commitCurrentComboBoxValue();
+                e.consume();
             }
         });
 
@@ -118,15 +175,4 @@ public class ComboBoxTreeTableCell<S, T> extends ExtendedTreeTableCell<S, T> {
         commitEdit(comboBox.getSelectionModel().getSelectedItem());
     }
 
-    private ComboBoxListViewSkin<T> createComboBoxSkin(ComboBox<T> comboBox) {
-        ComboBoxListViewSkin<T> skin = new ComboBoxListViewSkin<>(comboBox);
-
-        Node popupContent = skin.getPopupContent();
-        popupContent.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ESCAPE) {
-                isCancelEdit = true;
-            }
-        });
-        return skin;
-    }
 }

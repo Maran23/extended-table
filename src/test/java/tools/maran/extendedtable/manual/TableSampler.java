@@ -1,8 +1,10 @@
 package tools.maran.extendedtable.manual;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -16,8 +18,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
@@ -27,9 +31,12 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.ToolBar;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
@@ -57,6 +64,7 @@ import tools.maran.extendedtable.treetableview.column.GenericTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.IntegerTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.LongTreeTableColumn;
 import tools.maran.extendedtable.treetableview.column.StringTreeTableColumn;
+import tools.maran.shadfx.Theme;
 
 /// Manual test which shows the [ExtendedTableView] and the [ExtendedTreeTableView] side by side, each one inside its
 /// own tab, so both tables can be tried out by hand with a realistic amount of data.
@@ -66,7 +74,31 @@ public final class TableSampler {
 
     private static final int ITEM_COUNT = 25_000;
     private static final double FIXED_CELL_SIZE = 24;
+    private static final String MODENA = "Modena";
+    private static final String SHADFX = "ShadFX";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    // Marks all cells with the editable pseudo class light blue. As an author stylesheet, it wins over every rule of the
+    // theme, so selected and focused cells get the background of the theme back.
+    private static final String EDITABLE_STYLESHEET = "data:text/css;base64," + Base64.getEncoder().encodeToString("""
+            .table-cell:editable, .tree-table-cell:editable {
+                -fx-background-color: derive(#dcebfa, -10%), #dcebfa;
+                -fx-background-insets: 0, 0 0 1 0;
+                -fx-border-color: transparent derive(#dcebfa, -10%) transparent transparent;
+            }
+
+            .table-row-cell:selected > .table-cell:editable, .tree-table-row-cell:selected > .tree-table-cell:editable,
+            .table-cell:editable:selected, .tree-table-cell:editable:selected {
+                -fx-background-color: -fx-table-cell-border-color, -fx-background;
+                -fx-background-insets: 0, 0 0 1 0;
+                -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
+            }
+
+            .table-view:focused:cell-selection .table-cell:editable:focused,
+            .tree-table-view:focused:cell-selection .tree-table-cell:editable:focused {
+                -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+                -fx-background-insets: 0, 1, 2;
+            }
+            """.getBytes(StandardCharsets.UTF_8));
 
     private static final PersonGenerator GENERATOR = new PersonGenerator();
 
@@ -79,8 +111,14 @@ public final class TableSampler {
         Platform.startup(TableSampler::showStage);
     }
 
-    private static <T> void add(ExtendedTable<T> table, int index, T item) {
+    /// Adds the item at the given visible index, either to the shown items or to the backing items.
+    private static <T> void add(ExtendedTable<T> table, boolean shownItems, int index, T item) {
         List<T> items = table.getItems();
+        if (shownItems) {
+            items.add(index, item);
+            return;
+        }
+
         List<T> backingItems = table.getBackingItems();
         int backingIndex = index < items.size() ? backingItems.indexOf(items.get(index))
                 : backingItems.indexOf(items.getLast()) + 1;
@@ -89,14 +127,21 @@ public final class TableSampler {
 
     private static <T> MenuButton createActionsButton(ExtendedTable<T> table, IntFunction<List<T>> generator) {
         Supplier<T> newItem = () -> generator.apply(1).getFirst();
+        CheckMenuItem shownItems = new CheckMenuItem("Modify shown items");
         return new MenuButton("Actions", null, createMenuItem("Regenerate",
                 () -> table.setItems(FXCollections.observableArrayList(generator.apply(ITEM_COUNT)))),
-                new SeparatorMenuItem(), createMenuItem("Add first", () -> add(table, 0, newItem.get())),
-                createMenuItem("Add middle", () -> add(table, table.getItems().size() / 2, newItem.get())),
-                createMenuItem("Add last", () -> add(table, table.getItems().size(), newItem.get())),
-                new SeparatorMenuItem(), createMenuItem("Remove first", () -> remove(table, 0)),
-                createMenuItem("Remove middle", () -> remove(table, table.getItems().size() / 2)),
-                createMenuItem("Remove last", () -> remove(table, table.getItems().size() - 1)));
+                new SeparatorMenuItem(), shownItems,
+                createMenuItem("Add first", () -> add(table, shownItems.isSelected(), 0, newItem.get())),
+                createMenuItem("Add middle",
+                        () -> add(table, shownItems.isSelected(), table.getItems().size() / 2, newItem.get())),
+                createMenuItem("Add last",
+                        () -> add(table, shownItems.isSelected(), table.getItems().size(), newItem.get())),
+                new SeparatorMenuItem(),
+                createMenuItem("Remove first", () -> remove(table, shownItems.isSelected(), 0)),
+                createMenuItem("Remove middle",
+                        () -> remove(table, shownItems.isSelected(), table.getItems().size() / 2)),
+                createMenuItem("Remove last",
+                        () -> remove(table, shownItems.isSelected(), table.getItems().size() - 1)));
     }
 
     private static CheckBoxTableColumn<Person> createActiveColumn() {
@@ -153,6 +198,16 @@ public final class TableSampler {
         return column;
     }
 
+    private static CheckMenuItem createEditableMarkerToggle(Parent table) {
+        return createToggle("Mark editable cells", selected -> {
+            if (selected) {
+                table.getStylesheets().add(EDITABLE_STYLESHEET);
+            } else {
+                table.getStylesheets().remove(EDITABLE_STYLESHEET);
+            }
+        });
+    }
+
     private static CheckMenuItem createFixedCellSizeToggle(DoubleProperty fixedCellSize) {
         CheckMenuItem menuItem = createToggle("Fixed cell size",
                 selected -> fixedCellSize.set(selected ? FIXED_CELL_SIZE : 0));
@@ -188,6 +243,19 @@ public final class TableSampler {
         column.setWriteFunction(Person::setLastName);
         column.setValidator(TableSampler::isNotBlank);
         return column;
+    }
+
+    /// Creates the header to switch the theme of the scene, Modena by default.
+    private static ToolBar createHeader(Scene scene) {
+        ChoiceBox<String> theme = new ChoiceBox<>(FXCollections.observableArrayList(MODENA, SHADFX));
+        theme.setValue(MODENA);
+        theme.valueProperty().subscribe(value -> scene.getStylesheets()
+                .setAll(SHADFX.equals(value) ? Theme.of().stylesheets() : List.of()));
+
+        Label label = new Label("Theme");
+        label.setLabelFor(theme);
+
+        return new ToolBar(label, theme);
     }
 
     private static MenuItem createMenuItem(String text, Runnable action) {
@@ -254,10 +322,12 @@ public final class TableSampler {
 
         tableView.setItems(FXCollections.observableArrayList(GENERATOR.generate(ITEM_COUNT)));
         tableView.setValidationEnabled(true);
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
 
         MenuButton options = new MenuButton("Options", null, createToggle("Editable", tableView.editableProperty()),
                 createToggle("Validation", tableView.validationEnabledProperty()),
-                createFixedCellSizeToggle(tableView.fixedCellSizeProperty()));
+                createToggle("Cell selection", tableView.getSelectionModel().cellSelectionEnabledProperty()),
+                createEditableMarkerToggle(tableView), createFixedCellSizeToggle(tableView.fixedCellSizeProperty()));
         tableView.getHeaderButtons().addAll(options,
                 createSpinner("Fixed columns", tableView.fixedColumnCountProperty(), tableView.getColumns().size()),
                 createButton("Autosize columns", tableView::autosizeColumns),
@@ -418,11 +488,13 @@ public final class TableSampler {
                 .map(TableSampler::createTreeItem).toList();
         treeTableView.setItems(FXCollections.observableArrayList(treeItemGenerator.apply(ITEM_COUNT)));
         treeTableView.setValidationEnabled(true);
+        treeTableView.getSelectionModel().setCellSelectionEnabled(true);
 
         MenuButton options = new MenuButton("Options", null, createToggle("Editable", treeTableView.editableProperty()),
                 createToggle("Validation", treeTableView.validationEnabledProperty()),
+                createToggle("Cell selection", treeTableView.getSelectionModel().cellSelectionEnabledProperty()),
                 createToggle("Tree lines", treeTableView.showTreeLinesProperty()),
-                createFixedCellSizeToggle(treeTableView.fixedCellSizeProperty()));
+                createEditableMarkerToggle(treeTableView), createFixedCellSizeToggle(treeTableView.fixedCellSizeProperty()));
         treeTableView.getHeaderButtons().addAll(options,
                 createSpinner("Fixed columns", treeTableView.fixedColumnCountProperty(),
                         treeTableView.getColumns().size()),
@@ -474,9 +546,13 @@ public final class TableSampler {
         }
     }
 
-    /// Removes the visible item at the given index from the backing items.
-    private static <T> void remove(ExtendedTable<T> table, int index) {
-        table.getBackingItems().remove(table.getItems().get(index));
+    /// Removes the visible item at the given index, either from the shown items or from the backing items.
+    private static <T> void remove(ExtendedTable<T> table, boolean shownItems, int index) {
+        if (shownItems) {
+            table.getItems().remove(index);
+        } else {
+            table.getBackingItems().remove(table.getItems().get(index));
+        }
     }
 
     private static void setExpanded(ExtendedTreeTableView<Person> treeTableView, boolean expanded) {
@@ -493,13 +569,26 @@ public final class TableSampler {
     private static void showStage() {
         TabPane tabPane = new TabPane();
         tabPane.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
-        tabPane.getTabs().addAll(new Tab("ExtendedTableView", createTableView()),
-                new Tab("ExtendedTreeTableView", createTreeTableView()));
+        tabPane.getTabs().addAll(new Tab("ExtendedTableView", withFocusTarget(createTableView())),
+                new Tab("ExtendedTreeTableView", withFocusTarget(createTreeTableView())));
+
+        BorderPane root = new BorderPane(tabPane);
+        Scene scene = new Scene(root, 800, 600);
+        root.setTop(createHeader(scene));
 
         Stage stage = new Stage();
         stage.setTitle("Extended-Table Sampler");
-        stage.setScene(new Scene(tabPane, 800, 600));
+        stage.setScene(scene);
         stage.show();
     }
 
+    /// Adds a text field below the table, so the focus traversal out of the table can be tested.
+    private static Region withFocusTarget(Region table) {
+        TextField textField = new TextField();
+        textField.setPromptText("Focus target after the table");
+
+        BorderPane pane = new BorderPane(table);
+        pane.setBottom(textField);
+        return pane;
+    }
 }

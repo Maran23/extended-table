@@ -6,7 +6,7 @@
 
     <groupId>tools.maran</groupId>
     <artifactId>extended-table</artifactId>
-    <version>1.0.1</version>
+    <version>2.0.0</version>
     <packaging>jar</packaging>
 
     <name>Extended-Table</name>
@@ -18,7 +18,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
-        <javafx.version>26.0.1</javafx.version>
+        <javafx.version>27.0.1</javafx.version>
     </properties>
 
     <dependencies>
@@ -33,6 +33,13 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>6.1.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>tools.maran</groupId>
+            <artifactId>shadfx</artifactId>
+            <version>1.0.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -84,7 +91,6 @@
                 <configuration>
                     <failOnError>true</failOnError>
                     <windowtitle>Extended-Table API</windowtitle>
-                    <docfilessubdirs>true</docfilessubdirs>
                 </configuration>
                 <executions>
                     <execution>
@@ -141,8 +147,8 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:github.com/Maran23/extended-table.git</connection>
-        <developerConnection>scm:git:ssh://github.com/Maran23/extended-table.git</developerConnection>
+        <connection>scm:git:https://github.com/Maran23/extended-table.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Maran23/extended-table.git</developerConnection>
         <url>https://github.com/Maran23/extended-table</url>
     </scm>
 

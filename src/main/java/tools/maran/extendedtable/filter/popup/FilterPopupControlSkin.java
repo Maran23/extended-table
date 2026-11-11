@@ -29,10 +29,13 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
+import tools.maran.extendedtable.filter.popup.FilterBox.CustomListView;
 import tools.maran.extendedtable.filter.popup.FilterPopupControl.Status;
 import tools.maran.extendedtable.filter.popup.strategy.FilterStrategy;
 import tools.maran.extendedtable.table.common.TableI18N;
@@ -43,6 +46,8 @@ import tools.maran.extendedtable.table.common.TableI18N;
 ///         the item type
 /// @author Marius Hanl
 public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
+
+    private static final KeyCombination TAB = new KeyCodeCombination(KeyCode.TAB, KeyCombination.SHIFT_ANY);
 
     private final InvalidationListener itemsBackingListener = _ -> initBacking = true;
     private final WeakInvalidationListener weakBackingItemsListener = new WeakInvalidationListener(
@@ -245,6 +250,8 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
         itemListView.fixedCellSizeProperty().bind(getSkinnable().fixedCellSizeProperty());
         itemListView.setCellFactory(_ -> new SelectableCell<>());
         itemListView.setOnKeyPressed(this::onListViewKeyPressed);
+        // A filter, as the ListView behavior consumes TAB for the focus traversal before the handler.
+        itemListView.addEventFilter(KeyEvent.KEY_PRESSED, this::traverseItem);
 
         filterBox.getResetColumnButton().setOnAction(_ -> hideWithStatus(Status.RESET_COLUMN));
         filterBox.getResetAllButton().setOnAction(_ -> hideWithStatus(Status.RESET_ALL));
@@ -302,6 +309,9 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
 
         if (code == KeyCode.ESCAPE) {
             getSkinnable().hide();
+        } else if (code == KeyCode.TAB) {
+            // The popup has no window focus, so an unhandled TAB would be redirected to the owner (the table).
+            keyEvent.consume();
         }
     }
 
@@ -349,6 +359,29 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
                 // noop
             }
         }
+    }
+
+    /// Selects the next (TAB) or previous (SHIFT + TAB) item, wrapping around, and scrolls as little as possible to
+    /// show it. TAB with another modifier (e.g. CTRL) is left to the focus traversal, so the focus can leave the list.
+    private void traverseItem(KeyEvent keyEvent) {
+        if (!TAB.match(keyEvent)) {
+            return;
+        }
+
+        CustomListView<SelectableItem<S>> itemListView = filterBox.getItemListView();
+        int items = itemListView.getItems().size();
+        if (items == 0) {
+            return;
+        }
+
+        int step = keyEvent.isShiftDown() ? -1 : 1;
+        int selectedIndex = itemListView.getSelectionModel().getSelectedIndex();
+        // No selected item is treated as being right before the first item, as the ListView focuses the first item.
+        int index = Math.floorMod(selectedIndex == -1 && step == -1 ? -1 : selectedIndex + step, items);
+
+        itemListView.getSelectionModel().clearAndSelect(index);
+        itemListView.scrollIntoView(index);
+        keyEvent.consume();
     }
 
     private void onPropertiesAdded(Change<?, ?> change) {

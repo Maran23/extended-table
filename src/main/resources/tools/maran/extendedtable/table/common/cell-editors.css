@@ -1,0 +1,64 @@
+/*
+ * Sensible defaults based on modena.css. If Modena changes, this might need an update.
+ * ---
+ * Custom style for cell editors.
+ */
+
+/* The editor fills the cell while editing, see the cell skins */
+.cell-text-input:focused,
+.cell-combo-box:focused {
+    -fx-text-background-color: -fx-text-inner-color;
+    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
+    -fx-background-insets: 0, 2;
+}
+
+/* The ComboBox only shows its text and arrow. */
+.cell-combo-box {
+    -fx-background-color: null;
+    -fx-padding: 0;
+    -fx-min-width: 0;
+    -fx-max-width: infinity;
+}
+
+.cell-combo-box > .cell-combo-box-text {
+    -fx-text-fill: -fx-text-background-color;
+}
+
+.cell-combo-box > .arrow-button {
+    -fx-padding: 0 0 0 0.833em;
+}
+
+.cell-combo-box > .arrow-button > .arrow {
+    -fx-background-color: -fx-text-background-color;
+    -fx-padding: 0.166667em 0.333333em;
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+.cell-combo-box:disabled > .arrow-button {
+    -fx-opacity: 0;
+}
+
+.cell-text-input {
+    -fx-background-color: null;
+    -fx-text-fill: -fx-text-inner-color;
+    -fx-highlight-fill: -fx-selection-bar;
+    -fx-highlight-text-fill: -fx-selection-bar-text;
+    -fx-cursor: text;
+    -fx-padding: 0;
+}
+
+.cell-text-area {
+    -fx-padding: 0;
+    -fx-min-height: 0;
+}
+
+.cell-text-area > .scroll-pane,
+.cell-text-area > .scroll-pane > .viewport,
+.cell-text-area > .scroll-pane > .corner {
+    -fx-background-color: null;
+    -fx-padding: 0;
+}
+
+.cell-text-area .content {
+    -fx-padding: 0;
+}

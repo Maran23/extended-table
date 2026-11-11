@@ -25,6 +25,10 @@ public class ExtendedRootHeader extends ExtendedNestedTableColumnHeader {
 
     /// Layout the fixed column headers, if set.
     public void layoutFixedColumns() {
+        if (getChildren().isEmpty()) {
+            return;
+        }
+
         TableViewSkinBase<?, ?, ?, ?, ?> tableSkin = getTableSkin();
 
         if (tableSkin instanceof ExtendedTableSkin<?> extendedTableViewSkin) {

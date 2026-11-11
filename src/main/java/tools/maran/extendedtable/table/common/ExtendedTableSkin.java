@@ -18,6 +18,8 @@ public interface ExtendedTableSkin<S> {
     String AUTOSIZE_COLUMNS = "autosizeColumns";
     /// Key for refreshing a column. That is every cell that belongs to the column.
     String REFRESH_COLUMN = "refreshColumn";
+    /// Key for scrolling as little as possible, so that the row at the index value is fully visible and exists.
+    String SCROLL_INTO_VIEW = "scrollIntoView";
     /// Pseudo class for the table header when shown.
     PseudoClass PSEUDO_CLASS_SHOW_HEADER = PseudoClass.getPseudoClass("show-header");
 

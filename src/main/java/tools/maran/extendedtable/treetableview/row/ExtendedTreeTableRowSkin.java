@@ -58,19 +58,14 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
         ObservableMap<Object, Object> properties = treeTableView.getProperties();
         properties.addListener(propertiesMapListener);
 
-        if (treeTableView instanceof ExtendedTreeTableView) {
+        if (treeTableView instanceof ExtendedTreeTableView<S> extendedTreeTableView) {
             // Request layout so the tree lines are removed/added.
-            registerChangeListener(((ExtendedTreeTableView<S>) treeTableView).showTreeLinesProperty(),
-                    _ -> onShowTreeLinesChanged());
-        }
-
-        Skin<?> skin = treeTableView.getSkin();
-        if (skin instanceof ExtendedTreeTableViewSkin<?> extendedTableViewSkin) {
+            registerChangeListener(extendedTreeTableView.showTreeLinesProperty(), _ -> onShowTreeLinesChanged());
             // Request layout so the fixed cells will be removed/added.
-            registerChangeListener(extendedTableViewSkin.fixedColumnCountProperty(),
+            registerChangeListener(extendedTreeTableView.fixedColumnCountProperty(),
                     _ -> getSkinnable().requestLayout());
             // Request layout so the cell size is recalculated.
-            registerChangeListener(extendedTableViewSkin.cellSizeProviderProperty(),
+            registerChangeListener(extendedTreeTableView.cellSizeProviderProperty(),
                     _ -> getSkinnable().requestLayout());
         }
     }
@@ -137,19 +132,22 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
     @Override
     protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     @Override
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     @Override
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     // Raw type, as declared by JavaFX.
@@ -183,11 +181,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
 
         Skin<?> skin = treeTableView.getSkin();
         if (skin instanceof ExtendedTreeTableViewSkin<?> extendedTableViewSkin) {
-            int fixedColumnCount = extendedTableViewSkin.getFixedColumnCount();
-            if (fixedColumnCount > 0) {
-                double hScrollValue = extendedTableViewSkin.getHBarValue();
-                layoutFixedCells(x, y, fixedColumnCount, hScrollValue);
-            }
+            layoutFixedCells(x, y, extendedTableViewSkin.getFixedColumnCount(), extendedTableViewSkin.getHBarValue());
         }
 
         Node disclosureNode = getDisclosureNode();
@@ -253,6 +247,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
         return topMostColumn;
     }
 
+    /// Lays out the fixed cells over the scrolled cells and sets how much of every scrolled cell they overlap.
     private void layoutFixedCells(double x, double y, int fixedColumnCount, double hScrollValue) {
         TreeTableView<S> treeTableView = getSkinnable().getTreeTableView();
         double fixedCellSize = treeTableView.getFixedCellSize();
@@ -285,6 +280,8 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
             boolean differentTopMostColumn = currentTopMostColumn != previousTopMostColumn;
             if (fixedColumnCounter <= 0 && differentTopMostColumn) {
                 tableCell.getStyleClass().remove(FIXED_TREE_TABLE_CELL);
+                // The fixed cells come first, so they all are laid out at this point.
+                setFixedOverlap(tableCell, fixedColumnCount > 0 ? Math.max(0, newX - tableCell.getLayoutX()) : 0);
                 continue;
             }
 
@@ -297,6 +294,7 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
             if (!tableCell.getStyleClass().contains(FIXED_TREE_TABLE_CELL)) {
                 tableCell.getStyleClass().add(FIXED_TREE_TABLE_CELL);
             }
+            setFixedOverlap(tableCell, 0);
 
             previousTopMostColumn = currentTopMostColumn;
 
@@ -328,6 +326,15 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
             }
         }
 
+        if (fixedColumnCount <= 0) {
+            // The tree line drawer scrolls with the row again.
+            if (treeLineDrawer != null) {
+                treeLineDrawer.setLayoutX(0);
+                treeLineDrawer.setLayoutY(0);
+            }
+            return;
+        }
+
         // The disclosure node and the tree line drawer need to be resized and relocated too,
         // as otherwise they will scroll like the other unfixed cells.
         // It's also important that the relayout is performed in the end,
@@ -346,7 +353,15 @@ public class ExtendedTreeTableRowSkin<S> extends TreeTableRowSkin<S> implements 
         }
 
         if (treeLineDrawer != null) {
-            treeLineDrawer.relocate(startX, snappedTopInset());
+            treeLineDrawer.setLayoutX(startX);
+            treeLineDrawer.setLayoutY(snappedTopInset());
+        }
+    }
+
+    /// Sets the width of the cell which is overlapped by the fixed cells, so that part is clipped.
+    private static void setFixedOverlap(TreeTableCell<?, ?> tableCell, double width) {
+        if (tableCell instanceof ExtendedTreeTableCell<?, ?> cell) {
+            cell.setFixedOverlap(width);
         }
     }
 

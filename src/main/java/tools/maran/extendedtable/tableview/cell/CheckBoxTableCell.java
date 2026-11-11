@@ -1,8 +1,10 @@
 package tools.maran.extendedtable.tableview.cell;
 
 import javafx.beans.binding.Bindings;
-import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 
 /// [ExtendedTableCell] which shows a [CheckBox].
 ///
@@ -16,7 +18,7 @@ public class CheckBoxTableCell<S> extends ExtendedTableCell<S, Boolean> {
 
     /// Creates a new [CheckBoxTableCell] instance.
     public CheckBoxTableCell() {
-        setAlignment(Pos.CENTER);
+        getStyleClass().add("check-box-table-cell");
     }
 
     /// Creates the [CheckBox] which is shown in this cell.
@@ -24,9 +26,30 @@ public class CheckBoxTableCell<S> extends ExtendedTableCell<S, Boolean> {
     /// @return the newly created [CheckBox]
     protected CheckBox createCheckBox() {
         CheckBox checkBoxNode = new CheckBox();
+        checkBoxNode.setFocusTraversable(false);
+        checkBoxNode.addEventFilter(MouseEvent.MOUSE_PRESSED, _ -> {
+            getTableView().requestFocus();
+            getTableView().getSelectionModel().select(getIndex(), getTableColumn());
+        });
         checkBoxNode.selectedProperty().addListener(_ -> startAndCommitEdit(checkBoxNode));
+        checkBoxNode.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                checkBoxNode.fire();
+                e.consume();
+            }
+        });
 
         return checkBoxNode;
+    }
+
+    /// Focuses the [CheckBox], so it can be toggled with ENTER or SPACE.
+    @Override
+    public void startEdit() {
+        super.startEdit();
+
+        if (isEditing()) {
+            checkBox.requestFocus();
+        }
     }
 
     @Override

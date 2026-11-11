@@ -2,6 +2,8 @@
   "resources": [
     { "glob": "tools/maran/extendedtable/filter/popup/filter-popup.bss" },
     { "glob": "tools/maran/extendedtable/filter/popup/filter-popup.css" },
+    { "glob": "tools/maran/extendedtable/table/common/cell-editors.bss" },
+    { "glob": "tools/maran/extendedtable/table/common/cell-editors.css" },
     { "glob": "tools/maran/extendedtable/tableview/extended-table-view.bss" },
     { "glob": "tools/maran/extendedtable/tableview/extended-table-view.css" },
     { "glob": "tools/maran/extendedtable/treetableview/extended-tree-table-view.bss" },

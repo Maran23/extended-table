@@ -4,6 +4,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.util.Callback;
 
 /// [ExtendedTableCell] which shows a [TextInputControl] on edit.
+/// The cell has the `text-input-cell` style class, so the [TextInputControl] can fill the whole cell on edit.
 ///
 /// @param <S>
 ///         the source type
@@ -21,6 +22,7 @@ public abstract class GenericTextInputTableCell<S, T> extends ExtendedTableCell<
     /// Creates a new [GenericTextInputTableCell] instance.
     protected GenericTextInputTableCell() {
         super();
+        getStyleClass().add("text-input-cell");
     }
 
     @Override

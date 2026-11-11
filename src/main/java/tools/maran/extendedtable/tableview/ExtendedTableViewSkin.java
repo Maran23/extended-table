@@ -1,5 +1,6 @@
 package tools.maran.extendedtable.tableview;
 
+import java.util.List;
 import java.util.function.ToDoubleFunction;
 
 import javafx.beans.property.BooleanProperty;
@@ -10,7 +11,6 @@ import javafx.collections.MapChangeListener.Change;
 import javafx.collections.ObservableMap;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
-import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.skin.TableViewSkin;
@@ -49,6 +49,7 @@ public class ExtendedTableViewSkin<S> extends TableViewSkin<S> implements Extend
         properties.remove(AUTOSIZE_COLUMNS);
         properties.remove(REFRESH);
         properties.remove(REFRESH_COLUMN);
+        properties.remove(SCROLL_INTO_VIEW);
         properties.addListener(propertiesMapListener);
     }
 
@@ -85,7 +86,7 @@ public class ExtendedTableViewSkin<S> extends TableViewSkin<S> implements Extend
 
     @Override
     public double getHBarValue() {
-        return ((ExtendedVirtualFlow<TableRow<S>>) getVirtualFlow()).getHorizontalBarValue();
+        return getExtendedVirtualFlow().getHorizontalBarValue();
     }
 
     @Override
@@ -93,7 +94,7 @@ public class ExtendedTableViewSkin<S> extends TableViewSkin<S> implements Extend
         // JavaFX will request a layout when the fixed cell size is > 0.
         // We also need this without a fixed cell size set when the fixed column count is > 0.
         if (getSkinnable().getFixedCellSize() <= 0 && getFixedColumnCount() > 0) {
-            ((ExtendedVirtualFlow<TableRow<S>>) getVirtualFlow()).requestCellLayout();
+            getExtendedVirtualFlow().requestCellLayout();
         }
     }
 
@@ -121,53 +122,28 @@ public class ExtendedTableViewSkin<S> extends TableViewSkin<S> implements Extend
 
     @Override
     protected void scrollHorizontally(TableColumn<S, ?> col) {
-        if (col == null || !col.isVisible()) {
+        List<? extends TableColumn<S, ?>> columns = getSkinnable().getVisibleLeafColumns();
+        int index = columns.indexOf(col);
+        int fixedColumnCount = getFixedColumnCount();
+        // Fixed columns are always visible.
+        if (index < fixedColumnCount) {
             return;
         }
 
-        // work out where this column header is, and it's width (start -> end)
+        double fixedWidth = 0;
         double start = 0;
-        double end = 0;
-
-        int fixedColumnCount = getFixedColumnCount();
-        for (TableColumn<S, ?> c : getSkinnable().getVisibleLeafColumns()) {
-            if (c == col) {
-                break;
-            }
-
-            if (fixedColumnCount > 0) {
-                // we do not count fixed columns in as they will always be in front, therefore can be ignored.
-                fixedColumnCount--;
-                end += c.getWidth();
+        for (int i = 0; i < index; i++) {
+            if (i < fixedColumnCount) {
+                fixedWidth += columns.get(i).getWidth();
             } else {
-                start += c.getWidth();
+                start += columns.get(i).getWidth();
             }
         }
-        end = end + start + col.getWidth();
-
-        // determine the visible width of the table
-        double headerWidth = getSkinnable().getWidth();
-
-        // determine by how much we need to translate the table to ensure that the start position of this
-        // column lines up with the left edge of the tableview, and also that the columns don't become detached from the
-        // right edge of the table
-        ScrollBar hBar = getHBar();
-        double pos = hBar.getValue();
-        double max = hBar.getMax();
-
-        double newPos;
-        if (start < pos && start >= 0) {
-            newPos = start;
-        } else {
-            double delta = start < 0 || end > headerWidth ? start - pos : 0;
-            newPos = Math.min(pos + delta, max);
-        }
-
-        hBar.setValue(newPos);
+        getExtendedVirtualFlow().scrollHorizontallyIntoView(start, col.getWidth(), fixedWidth);
     }
 
-    private ScrollBar getHBar() {
-        return ((ExtendedVirtualFlow<TableRow<S>>) getVirtualFlow()).getHorizontalBar();
+    private ExtendedVirtualFlow<TableRow<S>> getExtendedVirtualFlow() {
+        return (ExtendedVirtualFlow<TableRow<S>>) getVirtualFlow();
     }
 
     private void headerVisibilityChanged(boolean isShowHeader) {
@@ -210,6 +186,12 @@ public class ExtendedTableViewSkin<S> extends TableViewSkin<S> implements Extend
         // So they will receive this event, and we remove it here once and for all.
         if (REFRESH_COLUMN.equals(change.getKey())) {
             getSkinnable().getProperties().remove(REFRESH_COLUMN);
+        }
+        if (SCROLL_INTO_VIEW.equals(change.getKey())) {
+            getSkinnable().getProperties().remove(SCROLL_INTO_VIEW);
+
+            int index = (int) change.getValueAdded();
+            getExtendedVirtualFlow().scrollIntoView(index);
         }
     }
 

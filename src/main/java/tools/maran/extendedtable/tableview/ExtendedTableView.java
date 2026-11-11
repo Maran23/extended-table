@@ -1,12 +1,10 @@
 package tools.maran.extendedtable.tableview;
 
-import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.ToDoubleFunction;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -18,21 +16,18 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.util.Pair;
 
 import tools.maran.extendedtable.filter.FilterableColumn;
 import tools.maran.extendedtable.filter.TableFilter;
+import tools.maran.extendedtable.table.common.CellKeyboard;
 import tools.maran.extendedtable.table.common.CommitEvent;
 import tools.maran.extendedtable.table.common.ExtendedTable;
 import tools.maran.extendedtable.table.common.ExtendedTableSkin;
@@ -53,14 +48,17 @@ import tools.maran.extendedtable.tableview.row.ExtendedTableRow;
 ///
 /// The default (empty) items or items set via [#setItems(ObservableList)] are the 'backing' items, which is the
 /// base for filtering. They can be retrieved by [#getBackingItems()] and can be used for further modification.
+/// Items set via [#setItems(ObservableList)] are copied, so the given list is never modified by this table and later
+/// changes to it are not reflected. [#getItems()] always returns the same list.
 /// When items are filtered, the backing items can be restored via [#restoreBackingItems()].
 /// A column can also be filtered in code via [#filter(FilterableColumn, java.util.Collection)] after the items were set,
 /// e.g. to initially only show some items. This is the same as when the user filters the column.
 ///
-/// # Limitation
+/// # Modification
 ///
-/// Since the [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()],
-/// it is not allowed to either add or remove items to it. In fact this will throw an [IllegalStateException].
+/// The [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()].
+/// Items added to or removed from them while filtered are added to or removed from the backing items as well.
+/// Added items are inserted after the item shown before them, or at the start, and are always shown.
 /// When the [items][#getItems()] should be replaced, use [#setItems(ObservableList)].
 /// It is also possible to modify the backing items directly via [#getBackingItems()].
 /// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
@@ -78,16 +76,12 @@ import tools.maran.extendedtable.tableview.row.ExtendedTableRow;
 /// @see #getBackingItems()
 public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<S> {
 
-    private final TableFilter<S> tableFilter = new TableFilter<>(this,
-            items -> setItems(FXCollections.observableArrayList(items)), this::resetValidator);
+    // The items shown by this table, which are never replaced. Items set via setItems(..) are copied into it.
+    private final ObservableList<S> items = FXCollections.observableArrayList();
 
-    private final ListChangeListener<S> itemsChangedListener = tableFilter::itemsChanged;
-    private final WeakListChangeListener<S> weakItemsChangedListener = new WeakListChangeListener<>(
-            itemsChangedListener);
+    private final TableFilter<S> tableFilter = new TableFilter<>(this, items::setAll, this::resetValidator);
 
-    private final InvalidationListener itemsInvalidatedListener = _ -> itemsInvalidated();
-    private final WeakInvalidationListener weakItemsInvalidatedListener = new WeakInvalidationListener(
-            itemsInvalidatedListener);
+    private final CellKeyboard<S> cellKeyboard = new CellKeyboard<>(this, () -> getItems().size());
 
     // The number of columns that should be fixed starting from the first column.
     private IntegerProperty fixedColumnCount;
@@ -106,7 +100,6 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
     private ObservableList<Node> headerButtons;
     private StringProperty headerText;
 
-    private WeakReference<ObservableList<S>> itemsRef;
     private TableValidator<S> tableValidator;
 
     private boolean isInEdit = false;
@@ -116,14 +109,15 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         getStyleClass().add("extended-table-view");
         setRowFactory(_ -> new ExtendedTableRow<>());
 
-        itemsProperty().addListener(weakItemsInvalidatedListener);
+        items.addListener(tableFilter::itemsChanged);
+        itemsProperty().addListener(_ -> itemsInvalidated());
 
-        // Attach listener to initial items set in the super constructor.
-        itemsRef = new WeakReference<>(null);
+        // Replaces the initial items set in the super constructor.
         itemsInvalidated();
         addEventFilter(ExtendedTable.commitEvent(), this::onCommit);
 
-        addEventFilter(KeyEvent.KEY_PRESSED, this::traverseToNextCell);
+        addEventFilter(KeyEvent.KEY_PRESSED, cellKeyboard::handle);
+        addEventFilter(KeyEvent.KEY_TYPED, cellKeyboard::handle);
     }
 
     /// Creates a new [ExtendedTableView] instance.
@@ -164,6 +158,11 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         isInEdit = true;
         super.edit(row, column);
         isInEdit = false;
+    }
+
+    @Override
+    public void edit(int row, TableColumnBase<S, ?> column) {
+        edit(row, (TableColumn<S, ?>) column);
     }
 
     @Override
@@ -215,6 +214,11 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
     /// @return the fixed column count
     public final int getFixedColumnCount() {
         return fixedColumnCount == null ? 0 : fixedColumnCountProperty().get();
+    }
+
+    @Override
+    public TableColumnBase<S, ?> getFocusedColumn() {
+        return getFocusModel().getFocusedCell().getTableColumn();
     }
 
     @Override
@@ -345,6 +349,16 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         tableFilter.restoreBackingItems();
     }
 
+    @Override
+    public final void scrollIntoView(int index) {
+        getProperties().put(ExtendedTableSkin.SCROLL_INTO_VIEW, index);
+    }
+
+    @Override
+    public void scrollToColumn(TableColumnBase<S, ?> column) {
+        scrollToColumn((TableColumn<S, ?>) column);
+    }
+
     /// Revalidates all items if the validation is enabled.
     public void revalidate() {
         if (tableValidator != null) {
@@ -447,61 +461,13 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         return new ExtendedTableViewSkin<>(this);
     }
 
-    /// Finds the previous or next cell to select/edit.
-    /// In case we reach the last cell and want to select the next, we return the first column.
-    ///
-    /// @param visibleLeafColumns
-    ///         all visible and editable leaf columns
-    /// @param forward
-    ///         true if we want to move forward (right); false otherwise (left)
-    /// @return the next table column
-    private Pair<TableColumn<S, ?>, Integer> findNextTablePosition(List<TableColumn<S, ?>> visibleLeafColumns,
-            boolean forward) {
-        TableColumn<S, ?> currentColumn = getFocusModel().getFocusedCell().getTableColumn();
-        int nextColumnIndex = visibleLeafColumns.indexOf(currentColumn);
-        int nextRowIndex = getSelectionModel().getSelectedIndex();
-
-        if (forward) {
-            nextColumnIndex++;
-            if (nextColumnIndex > visibleLeafColumns.size() - 1) {
-                nextColumnIndex = 0;
-                nextRowIndex++;
-
-                if (nextRowIndex == getItems().size()) {
-                    nextRowIndex = 0;
-                }
-            }
-        } else {
-            nextColumnIndex--;
-            if (nextColumnIndex < 0) {
-                nextColumnIndex = visibleLeafColumns.size() - 1;
-                nextRowIndex--;
-
-                if (nextRowIndex == -1) {
-                    nextRowIndex = getItems().size() - 1;
-                }
-            }
-        }
-
-        return new Pair<>(visibleLeafColumns.get(nextColumnIndex), nextRowIndex);
-    }
-
+    /// Copies the items set via [#setItems(ObservableList)] and shows the own items again.
     private void itemsInvalidated() {
-        ObservableList<S> oldItems = itemsRef.get();
-
-        if (oldItems != null) {
-            oldItems.removeListener(weakItemsChangedListener);
-        }
-
         ObservableList<S> newItems = getItems();
-        if (newItems == null) {
-            itemsRef = new WeakReference<>(null);
-        } else {
-            newItems.addListener(weakItemsChangedListener);
-            itemsRef = new WeakReference<>(newItems);
+        if (newItems != items) {
+            tableFilter.setItems(newItems == null ? List.of() : newItems);
+            setItems(items);
         }
-
-        tableFilter.itemsReplaced(newItems);
     }
 
     private void onCommit(CommitEvent<S> event) {
@@ -522,55 +488,6 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
             tableValidator.setAll(getItems());
             tableValidator.evaluateValidity();
         }
-    }
-
-    private void traverseToNextCell(KeyEvent event) {
-        if (event.getCode() != KeyCode.TAB) {
-            return;
-        }
-
-        List<TableColumn<S, ?>> visibleLeafColumns = getVisibleLeafColumns().stream()
-                .filter(TableColumnBase::isEditable).toList();
-
-        // There is no column that supports editing.
-        if (visibleLeafColumns.isEmpty()) {
-            return;
-        }
-
-        TableColumn<S, ?> currentColumn = getFocusModel().getFocusedCell().getTableColumn();
-        if (currentColumn == null) {
-            return;
-        }
-
-        boolean wasEditing = isEditing();
-        boolean isForward = !event.isShiftDown();
-
-        // Bounds the search when no cell can be edited.
-        int remainingCells = getItems().size() * visibleLeafColumns.size();
-        boolean isDone;
-        Pair<TableColumn<S, ?>, Integer> tablePair;
-        do {
-            tablePair = findNextTablePosition(visibleLeafColumns, isForward);
-
-            TableColumn<S, ?> nextColumn = tablePair.getKey();
-            int nextRow = tablePair.getValue();
-
-            // Flush any editing cell to commit or cancel his value by changing the focus and selection.
-            getSelectionModel().focus(nextRow);
-            getSelectionModel().select(nextRow, nextColumn);
-
-            if (wasEditing) {
-                edit(nextRow, nextColumn);
-
-                isDone = isEditing();
-            } else {
-                isDone = true;
-            }
-        } while (!isDone && --remainingCells > 0);
-
-        TableColumn<S, ?> nextColumn = tablePair.getKey();
-        scrollToColumn(getVisibleLeafColumn(getVisibleLeafIndex(nextColumn) - 1));
-        event.consume();
     }
 
     private ReadOnlyBooleanWrapper validPropertyImpl() {

@@ -6,8 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.TableColumnBase;
 
 import org.junit.jupiter.api.DisplayName;
@@ -67,6 +70,21 @@ class CheckBoxColumnTest extends JavaFxTest {
             CheckBox checkBox = (CheckBox) checkBoxColumn.getGraphic();
             assertFalse(checkBox.isSelected());
             assertFalse(checkBox.isIndeterminate());
+        });
+    }
+
+    @DisplayName("A checkbox cell is styled like the one of JavaFX, centered without padding")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testCheckBoxCellIsStyledLikeTheOneOfJavaFx(TableType tableType) {
+        runOnFxThread(() -> {
+            Control table = tableType.createTable(List.of(tableType.createCheckBoxColumn()));
+
+            showInStage(table, 400, 300);
+
+            Labeled checkBoxCell = (Labeled) table.lookup(tableType.getCellSelector());
+            assertEquals(Pos.CENTER, checkBoxCell.getAlignment());
+            assertEquals(Insets.EMPTY, checkBoxCell.getPadding());
         });
     }
 }
