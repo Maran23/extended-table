@@ -22,17 +22,17 @@ public class ExtendedTableRow<S> extends TableRow<S> {
     /// Refreshes this row by calling [#updateItem(Object, boolean)] with the newest value.
     /// Note that unused rows (index = -1) or empty rows (index >= count) are not updated.
     public void refresh() {
-        int index = getIndex();
         ObservableList<S> items = getTableView().getItems();
         if (items == null) {
             return;
         }
 
+        int index = getIndex();
         if (index < 0 || index >= items.size()) {
             return;
         }
 
-        S newItem = items.get(index);
+        final S newItem = items.get(index);
         updateItem(newItem, false);
     }
 

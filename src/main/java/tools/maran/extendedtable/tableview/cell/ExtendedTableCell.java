@@ -1,6 +1,7 @@
 package tools.maran.extendedtable.tableview.cell;
 
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -69,8 +70,13 @@ public class ExtendedTableCell<S, T> extends TableCell<S, T> {
     /// Refreshes this cell by calling [#updateItem(Object, boolean)] with the newest value.
     /// Note that unused rows (index = -1) or empty rows (index >= count) are not updated.
     public void refresh() {
+        ObservableList<S> items = getTableView().getItems();
+        if (items == null) {
+            return;
+        }
+
         int index = getIndex();
-        if (index < 0 || index >= getTableView().getItems().size()) {
+        if (index < 0 || index >= items.size()) {
             return;
         }
 
