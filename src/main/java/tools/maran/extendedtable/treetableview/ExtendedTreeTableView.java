@@ -68,6 +68,8 @@ import tools.maran.extendedtable.treetableview.row.ExtendedTreeTableRow;
 /// Since the [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()],
 /// it is not allowed to either add or remove items to it. In fact this will throw an [IllegalStateException].
 /// When the [items][#getItems()] should be replaced either use [#setRoot(TreeItem)] or [#setItems(ObservableList)].
+/// To keep the items in sync with another list, bind the content of the [backing items][#getBackingItems()]:
+/// `Bindings.bindContent(table.getBackingItems(), items)`.
 /// It is also possible to modify the backing items directly via [#getBackingItems()].
 /// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
 /// That is, added (or replacing) items are always shown, while removed items disappear. Items which are removed and
@@ -645,8 +647,11 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         tableFilter.itemsReplaced(items);
     }
 
+    /// Sets the items, unless they are bound, which are then shown as they are.
     private void setItemsImpl(ObservableList<TreeItem<S>> items) {
-        itemsProperty().set(items);
+        if (!itemsProperty().isBound()) {
+            itemsProperty().set(items);
+        }
     }
 
     private void showFilteredItems(List<TreeItem<S>> items) {

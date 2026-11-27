@@ -189,13 +189,15 @@ public final class TableFilter<S> {
     /// @param items
     ///         the new items of the table
     public void setItems(List<S> items) {
+        // The items may be the backing items or the items of the table, which would be cleared when set to themselves.
+        List<S> newItems = new ArrayList<>(items);
         resetFilters();
 
         isInternalItemsChange = true;
-        itemsSetter.accept(items);
+        itemsSetter.accept(newItems);
         isInternalItemsChange = false;
 
-        setBackingItems(items);
+        setBackingItems(newItems);
     }
 
     /// Adds the items to the given set.

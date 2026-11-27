@@ -28,6 +28,13 @@ class TableFilterTest extends JavaFxTest {
         runOnFxThread(() -> backingItemsAreCreatedFromTheCurrentItems(tableType.createItemTable()));
     }
 
+    @DisplayName("Setting the backing items or the items of the table to the table keeps them")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testSettingTheBackingItemsOrTheItemsKeepsThem(TableType tableType) {
+        runOnFxThread(() -> settingTheBackingItemsOrTheItemsKeepsThem(tableType.createItemTable()));
+    }
+
     private static <T> void backingItemsAreCreatedFromTheCurrentItems(ItemTable<T> itemTable) {
         ExtendedTable<T> table = itemTable.table();
         Supplier<T> newItem = itemTable.newItemFactory();
@@ -44,5 +51,20 @@ class TableFilterTest extends JavaFxTest {
 
     private static <T> List<T> newItems(Supplier<T> newItem, int count) {
         return Stream.generate(newItem).limit(count).toList();
+    }
+
+    private static <T> void settingTheBackingItemsOrTheItemsKeepsThem(ItemTable<T> itemTable) {
+        ExtendedTable<T> table = itemTable.table();
+        List<T> items = newItems(itemTable.newItemFactory(), 3);
+        table.setItems(FXCollections.observableArrayList(items));
+        table.filter(new KeyColumn<>(), items.subList(0, 1));
+
+        table.setItems(table.getBackingItems());
+        assertEquals(items, table.getItems());
+        assertEquals(items, table.getBackingItems());
+
+        table.setItems(table.getItems());
+        assertEquals(items, table.getItems());
+        assertEquals(items, table.getBackingItems());
     }
 }

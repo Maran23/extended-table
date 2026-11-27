@@ -1,15 +1,19 @@
 package tools.maran.extendedtable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TreeItem;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +37,14 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
     @BeforeEach
     void setUp() {
         runOnFxThread(() -> {
+            // Rethrows an exception inside a listener, which JavaFX passes on to the uncaught exception handler instead.
+            Thread.currentThread().setUncaughtExceptionHandler((_, throwable) -> {
+                if (throwable instanceof RuntimeException exception) {
+                    throw exception;
+                }
+                throw new RuntimeException(throwable);
+            });
+
             itemA = new TreeItem<>(new Row("false", "A", null));
             itemA1 = new TreeItem<>(new Row("false", "A1", null));
             itemB = new TreeItem<>(new Row("false", "B", null));
@@ -48,6 +60,27 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
         });
     }
 
+    @AfterEach
+    void tearDown() {
+        runOnFxThread(() -> Thread.currentThread().setUncaughtExceptionHandler(null));
+    }
+
+    @DisplayName("Setting a root while the items are bound keeps them and takes its children as backing items")
+    @Test
+    void testSettingARootWhileTheItemsAreBound() {
+        runOnFxThread(() -> {
+            ObservableList<TreeItem<Row>> items = FXCollections.observableArrayList(itemA);
+            table.itemsProperty().bind(new SimpleObjectProperty<>(items));
+            TreeItem<Row> root = new TreeItem<>();
+            root.getChildren().add(itemB);
+
+            table.setRoot(root);
+
+            assertSame(items, table.getItems());
+            assertEquals(List.of(itemB), table.getBackingItems());
+        });
+    }
+
     @DisplayName("All tree items contain the children of added items and stay complete when filtered")
     @Test
     void testAllTreeItemsContainChildrenAndStayCompleteWhenFiltered() {
@@ -59,19 +92,6 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
 
             table.restoreBackingItems();
             assertAllTreeItems(List.of(itemA, itemA1, itemB));
-        });
-    }
-
-    @DisplayName("Setting and restoring the items without a root keeps them as backing items")
-    @Test
-    void testSettingAndRestoringTheItemsWithoutARootKeepsThemAsBackingItems() {
-        runOnFxThread(() -> {
-            table.setRoot(null);
-
-            table.setItems(FXCollections.observableArrayList(List.of(itemA, itemB)));
-            table.restoreBackingItems();
-
-            assertEquals(List.of(itemA, itemB), table.getBackingItems());
         });
     }
 
@@ -117,6 +137,19 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
             table.scrollTo(itemB.getValue());
 
             assertEquals(2, scrolledRow.get());
+        });
+    }
+
+    @DisplayName("Setting and restoring the items without a root keeps them as backing items")
+    @Test
+    void testSettingAndRestoringTheItemsWithoutARootKeepsThemAsBackingItems() {
+        runOnFxThread(() -> {
+            table.setRoot(null);
+
+            table.setItems(FXCollections.observableArrayList(List.of(itemA, itemB)));
+            table.restoreBackingItems();
+
+            assertEquals(List.of(itemA, itemB), table.getBackingItems());
         });
     }
 
