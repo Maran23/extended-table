@@ -52,14 +52,11 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
         ObservableMap<Object, Object> properties = tableView.getProperties();
         properties.addListener(propertiesMapListener);
 
-        Skin<?> skin = tableView.getSkin();
-        if (skin instanceof ExtendedTableViewSkin<?> extendedTableViewSkin) {
+        if (tableView instanceof ExtendedTableView<S> extendedTableView) {
             // Request layout so the fixed cells will be removed/added.
-            registerChangeListener(extendedTableViewSkin.fixedColumnCountProperty(),
-                    _ -> getSkinnable().requestLayout());
+            registerChangeListener(extendedTableView.fixedColumnCountProperty(), _ -> getSkinnable().requestLayout());
             // Request layout so the cell size is recalculated.
-            registerChangeListener(extendedTableViewSkin.cellSizeProviderProperty(),
-                    _ -> getSkinnable().requestLayout());
+            registerChangeListener(extendedTableView.cellSizeProviderProperty(), _ -> getSkinnable().requestLayout());
         }
     }
 
@@ -80,19 +77,22 @@ public class ExtendedTableRowSkin<S> extends TableRowSkin<S> {
     @Override
     protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     @Override
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     @Override
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        return calculateCellSize().orElse(super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset));
+        return snapSizeY(calculateCellSize()
+                .orElse(super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset)));
     }
 
     // Raw type, as declared by JavaFX.

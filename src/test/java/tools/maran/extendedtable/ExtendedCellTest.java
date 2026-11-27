@@ -1,5 +1,6 @@
 package tools.maran.extendedtable;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,6 +9,7 @@ import java.util.List;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.layout.Region;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,6 +47,24 @@ class ExtendedCellTest extends JavaFxTest {
             table.layout();
             cell = getLastRowCell(tableType, table);
             assertFalse(cell.isEmpty());
+        });
+    }
+
+    @DisplayName("A row is snapped to whole pixels when its cells are not")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testRowIsSnappedToWholePixelsWhenItsCellsAreNot(TableType tableType) {
+        runOnFxThread(() -> {
+            Control table = tableType.createTable(List.of(tableType.createColumn("Column", "Value", () -> {
+                Region graphic = new Region();
+                graphic.setPrefHeight(30.5);
+                return graphic;
+            })));
+
+            showInStage(table, 400, 300);
+
+            Region row = (Region) getLastRowCell(tableType, table).getParent();
+            assertEquals(Math.ceil(row.getHeight()), row.getHeight());
         });
     }
 
