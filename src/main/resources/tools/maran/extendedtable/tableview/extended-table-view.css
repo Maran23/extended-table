@@ -61,6 +61,7 @@
 
 .table-view > .header > .button-box {
     -fx-spacing: 0.166667em;
+    -fx-alignment: center-right;
 }
 
 .table-view > .header > .label {

@@ -3,6 +3,8 @@ package tools.maran.extendedtable.tableview.cell;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
@@ -25,8 +27,8 @@ public class ExtendedTableCell<S, T> extends TableCell<S, T> {
 
     /// Creates a new [ExtendedTableCell] instance.
     public ExtendedTableCell() {
-        // Override the cell alignment as otherwise JavaFX is doing it in the layout of a table row for whatever reason.
-        setAlignment(Pos.CENTER_LEFT);
+        // To work around the JavaFX 'bug' that this might be changed during layout, we will set here first.
+        ((StyleableProperty<Pos>) alignmentProperty()).applyStyle(StyleOrigin.USER_AGENT, Pos.CENTER_LEFT);
     }
 
     @Override

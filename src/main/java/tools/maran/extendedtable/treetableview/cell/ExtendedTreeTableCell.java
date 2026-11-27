@@ -2,6 +2,8 @@ package tools.maran.extendedtable.treetableview.cell;
 
 import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -27,8 +29,8 @@ public class ExtendedTreeTableCell<S, T> extends TreeTableCell<S, T> {
 
     /// Creates a new [ExtendedTreeTableCell] instance.
     public ExtendedTreeTableCell() {
-        // Override the cell alignment as otherwise JavaFX is doing it in the layout of a table row for whatever reason.
-        setAlignment(Pos.CENTER_LEFT);
+        // To work around the JavaFX 'bug' that this might be changed during layout, we will set here first.
+        ((StyleableProperty<Pos>) alignmentProperty()).applyStyle(StyleOrigin.USER_AGENT, Pos.CENTER_LEFT);
 
         // We don't want the cell to expand/collapse if the user double click this cell when editable.
         // Therefore, we may consume this event and send a normal edit event instead.

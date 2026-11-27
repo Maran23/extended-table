@@ -48,6 +48,39 @@
     -fx-min-height: 0;
 }
 
+/* Same as the .check-box-table-cell of Modena, which has no style for the .check-box-tree-table-cell */
+.check-box-tree-table-cell {
+    -fx-alignment: center;
+    -fx-padding: 0;
+}
+
+.check-box-tree-table-cell > .check-box {
+    -fx-font-size: 0.8em;
+    -fx-opacity: 1;
+    -fx-padding: 0 0 1 0;
+}
+
+.check-box-tree-table-cell > .check-box > .box {
+    -fx-background-color: -fx-outer-border, -fx-background;
+    -fx-background-insets: 0, 1;
+}
+
+.check-box-tree-table-cell > .check-box:focused > .box {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-background;
+    -fx-background-insets: -0.2, 1, 1.6;
+    -fx-background-radius: 3, 2, 1;
+}
+
+.check-box-tree-table-cell > .check-box:selected > .box > .mark {
+    -fx-background-color: -fx-text-background-color;
+    -fx-background-insets: 0;
+}
+
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .check-box-tree-table-cell:selected > .check-box > .box,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-tree-table-cell > .check-box > .box {
+    -fx-background-color: derive(-fx-accent, 40%), -fx-background;
+}
+
 /* Header */
 
 .tree-table-view > .header {
@@ -57,6 +90,7 @@
 
 .tree-table-view > .header > .button-box {
     -fx-spacing: 0.166667em;
+    -fx-alignment: center-right;
 }
 
 .tree-table-view > .header > .label {

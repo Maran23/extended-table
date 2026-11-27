@@ -7,8 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import javafx.collections.ObservableList;
+import javafx.geometry.Pos;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Labeled;
 import javafx.scene.layout.Region;
 
 import org.junit.jupiter.api.DisplayName;
@@ -65,6 +67,23 @@ class ExtendedCellTest extends JavaFxTest {
 
             Region row = (Region) getLastRowCell(tableType, table).getParent();
             assertEquals(Math.ceil(row.getHeight()), row.getHeight());
+        });
+    }
+
+    @DisplayName("A cell stays aligned center left in a row higher than 24 pixels")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testCellStaysAlignedCenterLeftInAHighRow(TableType tableType) {
+        runOnFxThread(() -> {
+            Control table = tableType.createTable(List.of(tableType.createColumn("Column", "Value", () -> {
+                Region graphic = new Region();
+                graphic.setPrefHeight(40);
+                return graphic;
+            })));
+
+            showInStage(table, 400, 300);
+
+            assertEquals(Pos.CENTER_LEFT, ((Labeled) getLastRowCell(tableType, table)).getAlignment());
         });
     }
 

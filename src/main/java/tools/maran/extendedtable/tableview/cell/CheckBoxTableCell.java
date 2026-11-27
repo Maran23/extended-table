@@ -1,7 +1,6 @@
 package tools.maran.extendedtable.tableview.cell;
 
 import javafx.beans.binding.Bindings;
-import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 
 /// [ExtendedTableCell] which shows a [CheckBox].
@@ -16,7 +15,7 @@ public class CheckBoxTableCell<S> extends ExtendedTableCell<S, Boolean> {
 
     /// Creates a new [CheckBoxTableCell] instance.
     public CheckBoxTableCell() {
-        setAlignment(Pos.CENTER);
+        getStyleClass().add("check-box-table-cell");
     }
 
     /// Creates the [CheckBox] which is shown in this cell.
