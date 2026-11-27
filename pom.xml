@@ -13,7 +13,7 @@
     <description>ExtendedTable is a JavaFX library that extends the default TableView and TreeTableView
         with many new features like a very fast filter, validation, fixed column support, tree lines and more.
     </description>
-    <url>https://github.com/Maran23/extended-table</url>
+    <url>https://github.com/Maran-Tools/extended-table</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -136,14 +136,14 @@
     <licenses>
         <license>
             <name>MIT License</name>
-            <url>https://github.com/Maran23/extended-table/blob/master/LICENSE</url>
+            <url>https://github.com/Maran-Tools/extended-table/blob/master/LICENSE</url>
         </license>
     </licenses>
 
     <scm>
-        <connection>scm:git:github.com/Maran23/extended-table.git</connection>
-        <developerConnection>scm:git:ssh://github.com/Maran23/extended-table.git</developerConnection>
-        <url>https://github.com/Maran23/extended-table</url>
+        <connection>scm:git:github.com/Maran-Tools/extended-table.git</connection>
+        <developerConnection>scm:git:ssh://github.com/Maran-Tools/extended-table.git</developerConnection>
+        <url>https://github.com/Maran-Tools/extended-table</url>
     </scm>
 
 </project>

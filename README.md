@@ -2,11 +2,11 @@
 
 `ExtendedTable` is a JavaFX library that extends the default `TableView` and `TreeTableView` with many new features like a very fast filter, validation, fixed column support, tree lines and more.
 
-![Table Sampler](https://github.com/Maran23/extended-table/blob/demo/demo/table.webp)
+![Table Sampler](https://github.com/Maran-Tools/extended-table/blob/demo/demo/table.webp)
 
-![TreeTable Sampler](https://github.com/Maran23/extended-table/blob/demo/demo/treetable.webp)
+![TreeTable Sampler](https://github.com/Maran-Tools/extended-table/blob/demo/demo/treetable.webp)
 
-![Filter Sampler](https://github.com/Maran23/extended-table/blob/demo/demo/filter.webp)
+![Filter Sampler](https://github.com/Maran-Tools/extended-table/blob/demo/demo/filter.webp)
 
 ## Table of Contents
 
