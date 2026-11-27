@@ -84,8 +84,8 @@ import tools.maran.extendedtable.treetableview.row.ExtendedTreeTableRow;
 /// @see #getBackingItems()
 public class ExtendedTreeTableView<S> extends TreeTableView<S> implements ExtendedTable<TreeItem<S>> {
 
-    private final TableFilter<TreeItem<S>> tableFilter = new TableFilter<>(this,
-            items -> getRoot().getChildren().setAll(items), this::resetValidator);
+    private final TableFilter<TreeItem<S>> tableFilter = new TableFilter<>(this, this::showFilteredItems,
+            this::resetValidator);
 
     private final ListChangeListener<TreeItem<S>> childrenListener = tableFilter::itemsChanged;
     private final WeakListChangeListener<TreeItem<S>> weakChildrenListener = new WeakListChangeListener<>(
@@ -647,6 +647,13 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
 
     private void setItemsImpl(ObservableList<TreeItem<S>> items) {
         itemsProperty().set(items);
+    }
+
+    private void showFilteredItems(List<TreeItem<S>> items) {
+        TreeItem<S> root = getRoot();
+        if (root != null) {
+            root.getChildren().setAll(items);
+        }
     }
 
     private void traverseToNextCell(KeyEvent event) {

@@ -62,6 +62,19 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
         });
     }
 
+    @DisplayName("Setting and restoring the items without a root keeps them as backing items")
+    @Test
+    void testSettingAndRestoringTheItemsWithoutARootKeepsThemAsBackingItems() {
+        runOnFxThread(() -> {
+            table.setRoot(null);
+
+            table.setItems(FXCollections.observableArrayList(List.of(itemA, itemB)));
+            table.restoreBackingItems();
+
+            assertEquals(List.of(itemA, itemB), table.getBackingItems());
+        });
+    }
+
     @DisplayName("Selecting the header checkbox selects all top level items, even when children are expanded")
     @Test
     void testHeaderCheckBoxSelectsAllTopLevelItems() {
