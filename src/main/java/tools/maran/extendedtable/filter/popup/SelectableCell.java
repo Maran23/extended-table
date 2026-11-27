@@ -19,6 +19,7 @@ public class SelectableCell<S> extends ListCell<SelectableItem<S>> {
     SelectableCell() {
         checkBox = new CheckBox();
         checkBox.setAlignment(Pos.TOP_LEFT);
+        checkBox.setFocusTraversable(false);
 
         setOnMousePressed(_ -> selectCheckBox());
         setOnDragDetected(_ -> startDragging());

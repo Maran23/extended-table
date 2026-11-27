@@ -300,8 +300,16 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
             return;
         }
 
+        if (code == KeyCode.ENTER && keyEvent.isControlDown()) {
+            filterBox.getApplyButton().fire();
+        }
+
         if (code == KeyCode.ESCAPE) {
             getSkinnable().hide();
+        }
+
+        if (code == KeyCode.ENTER || code == KeyCode.TAB || code == KeyCode.ESCAPE) {
+            keyEvent.consume();
         }
     }
 
@@ -337,16 +345,10 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
     private void onListViewKeyPressed(KeyEvent keyEvent) {
         KeyCode code = keyEvent.getCode();
 
-        switch (code) {
-            case ENTER, SPACE -> {
-                SelectableItem<S> selectedItem = filterBox.getItemListView().getSelectionModel().getSelectedItem();
-                if (selectedItem != null) {
-                    selectedItem.setSelected(!selectedItem.isSelected());
-                }
-            }
-            case ESCAPE -> getSkinnable().hide();
-            default -> {
-                // noop
+        if (code == KeyCode.SPACE || (code == KeyCode.ENTER && !keyEvent.isControlDown())) {
+            SelectableItem<S> selectedItem = filterBox.getItemListView().getSelectionModel().getSelectedItem();
+            if (selectedItem != null) {
+                selectedItem.setSelected(!selectedItem.isSelected());
             }
         }
     }
@@ -386,15 +388,10 @@ public class FilterPopupControlSkin<S> implements Skin<FilterPopupControl<S>> {
     }
 
     private void onTextFieldEnterPress(KeyEvent keyEvent) {
-        KeyCode code = keyEvent.getCode();
-
-        if (code == KeyCode.ENTER) {
-            if (keyEvent.isControlDown()) {
-                hideWithStatus(Status.APPLY);
-                return;
-            }
+        if (keyEvent.getCode() == KeyCode.ENTER && !keyEvent.isControlDown()) {
             ListView<SelectableItem<S>> itemListView = filterBox.getItemListView();
-            itemListView.getItems().forEach(item -> item.setSelected(true));
+            boolean select = !itemListView.getItems().stream().allMatch(SelectableItem::isSelected);
+            itemListView.getItems().forEach(item -> item.setSelected(select));
             itemListView.refresh();
             updateSelectionIndicatorLbl();
         }
