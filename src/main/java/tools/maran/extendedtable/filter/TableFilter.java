@@ -7,10 +7,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -36,7 +34,7 @@ import tools.maran.extendedtable.table.common.ExtendedTable;
 /// @author Marius Hanl
 public final class TableFilter<S> {
 
-    private final Map<FilterableColumn<S>, BitSet> filteredOutItems;
+    private final FilteredOutItems<S> filteredOutItems;
 
     private final ExtendedTable<S> table;
     private final Supplier<ObservableList<S>> tableItems;
@@ -47,8 +45,6 @@ public final class TableFilter<S> {
 
     private boolean isInternalItemsChange;
     private boolean isInternalBackingItemsChange;
-
-    private Map<BitSet, Set<S>> lastRemovedFilteredOutItems;
 
     /// Creates a new [TableFilter] instance.
     ///
@@ -62,7 +58,7 @@ public final class TableFilter<S> {
         this.table = table;
         this.tableItems = tableItems;
         this.onItemsChanged = onItemsChanged;
-        filteredOutItems = new IdentityHashMap<>(48);
+        filteredOutItems = new FilteredOutItems<>();
 
         table.getVisibleLeafColumns().addListener((InvalidationListener) _ -> resetRemovedColumns());
     }
@@ -163,7 +159,7 @@ public final class TableFilter<S> {
     /// @param column
     ///         the column whose filter is reset
     public void resetFilter(FilterableColumn<S> column) {
-        if (filteredOutItems.remove(column) == null) {
+        if (!filteredOutItems.remove(column)) {
             return;
         }
 
@@ -192,27 +188,8 @@ public final class TableFilter<S> {
         setBackingItems(newItems);
     }
 
-    /// Adds the removed items every column filters out, which needs to happen before their bits are replaced.
-    private void addRemovedFilteredOutItems(Map<BitSet, Set<S>> removedFilteredOutItems, List<? extends S> removed,
-            int from) {
-        for (BitSet bits : filteredOutItems.values()) {
-            BitSet removedBits = bits.get(from, from + removed.size());
-            if (removedBits.isEmpty()) {
-                continue;
-            }
-
-            Set<S> items = removedFilteredOutItems.computeIfAbsent(bits,
-                    _ -> newIdentitySet(removedBits.cardinality()));
-            for (int i = removedBits.nextSetBit(0); i >= 0; i = removedBits.nextSetBit(i + 1)) {
-                items.add(removed.get(i));
-            }
-        }
-    }
-
     private BitSet allFilteredOutItems() {
-        BitSet allFilteredOutItems = new BitSet(getBackingItems().size());
-        filteredOutItems.values().forEach(allFilteredOutItems::or);
-        return allFilteredOutItems;
+        return filteredOutItems.all(getBackingItems().size());
     }
 
     /// Applies the change of the source to the target, which contained the same items as the source before.
@@ -236,13 +213,12 @@ public final class TableFilter<S> {
     /// and added within the change are matched by identity, so they keep their visibility.
     private void applyFilteredBackingItemsChange(Change<? extends S> change, ObservableList<S> items) {
         BitSet allFilteredOutItems = allFilteredOutItems();
-        Set<S> addedItems = newIdentitySet(0);
-        Map<BitSet, Set<S>> removedFilteredOutItems = new IdentityHashMap<>();
+        Set<S> addedItems = Collections.newSetFromMap(new IdentityHashMap<>());
         boolean permutated = false;
         while (change.next()) {
             int from = change.getFrom();
             if (change.wasPermutated()) {
-                permutateBitSet(change);
+                filteredOutItems.permutate(change);
                 allFilteredOutItems = allFilteredOutItems();
                 permutated = true;
                 continue;
@@ -254,16 +230,17 @@ public final class TableFilter<S> {
             items.subList(shownFrom, shownFrom + shownRemovedSize).clear();
             items.addAll(shownFrom, change.getAddedSubList());
 
-            addRemovedFilteredOutItems(removedFilteredOutItems, removed, from);
+            filteredOutItems.rememberRemoved(removed, from);
             addedItems.addAll(change.getAddedSubList());
 
-            replace(allFilteredOutItems, from, removed.size(), change.getAddedSize());
-            for (BitSet bits : filteredOutItems.values()) {
-                replace(bits, from, removed.size(), change.getAddedSize());
-            }
+            FilteredOutItems.replaceBits(allFilteredOutItems, from, removed.size(), change.getAddedSize());
+            filteredOutItems.replace(from, removed.size(), change.getAddedSize());
         }
 
-        hideMovedFilteredOutItems(items, addedItems, removedFilteredOutItems);
+        // The moved items which are filtered out again are hidden.
+        if (filteredOutItems.restoreMoved(addedItems, getBackingItems())) {
+            items.setAll(shownBackingItems(allFilteredOutItems()));
+        }
 
         if (permutated) {
             sortByOrderOf(items, shownBackingItems(allFilteredOutItems()));
@@ -309,7 +286,6 @@ public final class TableFilter<S> {
 
     /// Shows all backing items which are not filtered out by any filtered column.
     private void applyFilters() {
-        lastRemovedFilteredOutItems = null;
         BitSet allFilteredOutItems = allFilteredOutItems();
         if (allFilteredOutItems.isEmpty()) {
             restoreBackingItems();
@@ -355,7 +331,7 @@ public final class TableFilter<S> {
         }
 
         // Removed items are shown, so the filtered out items are never removed.
-        moveFilteredOutItems(newIndices, items.size());
+        filteredOutItems.move(newIndices, items.size());
         setBackingItems(items);
     }
 
@@ -374,7 +350,6 @@ public final class TableFilter<S> {
 
         isInternalItemsChange = true;
         if (filteredOutItems.isEmpty()) {
-            lastRemovedFilteredOutItems = null;
             applyChange(change, getBackingItems(), items);
         } else {
             applyFilteredBackingItemsChange(change, items);
@@ -389,23 +364,6 @@ public final class TableFilter<S> {
             filtered = new ReadOnlyBooleanWrapper(table, "filtered");
         }
         return filtered;
-    }
-
-    /// Hides the added items which were filtered out when they were removed, by this or the last change, as they were
-    /// just moved. The filtered out items removed by this change are remembered for the next one.
-    private void hideMovedFilteredOutItems(ObservableList<S> items, Set<S> addedItems,
-            Map<BitSet, Set<S>> removedFilteredOutItems) {
-        Map<BitSet, Set<S>> lastRemovedItems = lastRemovedFilteredOutItems;
-        lastRemovedFilteredOutItems = addedItems.isEmpty() ? removedFilteredOutItems : null;
-        if (addedItems.isEmpty()) {
-            return;
-        }
-
-        boolean isRestored = restoreMovedFilteredOutItems(removedFilteredOutItems, addedItems);
-        isRestored |= restoreMovedFilteredOutItems(lastRemovedItems, addedItems);
-        if (isRestored) {
-            items.setAll(shownBackingItems(allFilteredOutItems()));
-        }
     }
 
     /// Returns the index of every item, which is the first one for an item contained multiple times.
@@ -433,22 +391,6 @@ public final class TableFilter<S> {
         return true;
     }
 
-    /// Moves the filtered out items of every column to their new index.
-    private void moveFilteredOutItems(int[] newIndices, int size) {
-        for (Entry<FilterableColumn<S>, BitSet> entry : filteredOutItems.entrySet()) {
-            BitSet bits = entry.getValue();
-            BitSet newBits = new BitSet(size);
-            for (int i = bits.nextSetBit(0); i >= 0; i = bits.nextSetBit(i + 1)) {
-                newBits.set(newIndices[i]);
-            }
-            entry.setValue(newBits);
-        }
-    }
-
-    private static <T> Set<T> newIdentitySet(int expectedSize) {
-        return Collections.newSetFromMap(new IdentityHashMap<>(expectedSize));
-    }
-
     /// Moves the backing indices of the items of the table along with their permutation.
     private static void permutate(int[] backingIndices, Change<?> change) {
         int[] permutated = backingIndices.clone();
@@ -458,102 +400,30 @@ public final class TableFilter<S> {
         System.arraycopy(permutated, 0, backingIndices, 0, backingIndices.length);
     }
 
-    private void permutateBitSet(Change<? extends S> change) {
-        int from = change.getFrom();
-        int to = change.getTo();
-        for (BitSet bits : filteredOutItems.values()) {
-            BitSet permutatedBits = bits.get(from, to);
-            bits.clear(from, to);
-            for (int i = permutatedBits.nextSetBit(0); i >= 0; i = permutatedBits.nextSetBit(i + 1)) {
-                bits.set(change.getPermutation(from + i));
-            }
-        }
-    }
-
-    /// Replaces the given amount of bits at the given index with the given amount of clear bits, shifting all bits
-    /// after them accordingly.
-    ///
-    /// The tail after the replaced bits is moved to its new index a whole word (64 bits) at a time: each word is split
-    /// at the bit offset, its lower part is shifted into the target word and its upper part into the next one.
-    private static void replace(BitSet bits, int from, int removedSize, int addedSize) {
-        int length = bits.length();
-        if (removedSize == addedSize || from + removedSize >= length) {
-            bits.clear(from, from + removedSize);
-            return;
-        }
-
-        BitSet tail = bits.get(from + removedSize, length);
-        bits.clear(from, length);
-
-        int offset = from + addedSize;
-        int wordOffset = offset / Long.SIZE;
-        int bitOffset = offset % Long.SIZE;
-        long[] words = tail.toLongArray();
-        long[] shiftedWords = new long[wordOffset + words.length + 1];
-        for (int i = 0; i < words.length; i++) {
-            shiftedWords[wordOffset + i] |= words[i] << bitOffset;
-            if (bitOffset != 0) {
-                shiftedWords[wordOffset + i + 1] |= words[i] >>> (Long.SIZE - bitOffset);
-            }
-        }
-        bits.or(BitSet.valueOf(shiftedWords));
-    }
-
     private void resetFilters() {
-        filteredOutItems.keySet().forEach(column -> column.setFiltered(false));
+        filteredOutItems.columns().forEach(column -> column.setFiltered(false));
         filteredOutItems.clear();
-        lastRemovedFilteredOutItems = null;
 
         filteredImpl().set(false);
     }
 
     /// Resets the filter of every filtered column which was removed from the table.
     private void resetRemovedColumns() {
-        boolean reset = false;
-        for (Iterator<FilterableColumn<S>> iterator = filteredOutItems.keySet().iterator(); iterator.hasNext(); ) {
-            FilterableColumn<S> column = iterator.next();
-            if (!isInTable((TableColumnBase<?, ?>) column)) {
-                iterator.remove();
-                column.setFiltered(false);
-                reset = true;
-            }
+        List<FilterableColumn<S>> removedColumns = filteredOutItems.columns().stream()
+                .filter(column -> !isInTable((TableColumnBase<?, ?>) column)).toList();
+        if (removedColumns.isEmpty()) {
+            return;
         }
 
-        if (reset) {
-            applyFilters();
+        for (FilterableColumn<S> column : removedColumns) {
+            filteredOutItems.remove(column);
+            column.setFiltered(false);
         }
-    }
-
-    /// Filters out the removed filtered out items again, which were added back and therefore just moved.
-    ///
-    /// @return true, when an added item is filtered out again, false otherwise
-    private boolean restoreMovedFilteredOutItems(Map<BitSet, Set<S>> removedFilteredOutItems, Set<S> addedItems) {
-        if (removedFilteredOutItems == null) {
-            return false;
-        }
-
-        boolean isRestored = false;
-        List<S> backingItems = getBackingItems();
-        for (Entry<BitSet, Set<S>> entry : removedFilteredOutItems.entrySet()) {
-            BitSet bits = entry.getKey();
-            Set<S> items = entry.getValue();
-            items.retainAll(addedItems);
-            if (items.isEmpty()) {
-                continue;
-            }
-
-            for (int i = 0; i < backingItems.size(); i++) {
-                if (items.contains(backingItems.get(i))) {
-                    bits.set(i);
-                }
-            }
-            isRestored = true;
-        }
-        return isRestored;
+        applyFilters();
     }
 
     private void setBackingItems(List<? extends S> items) {
-        lastRemovedFilteredOutItems = null;
+        filteredOutItems.forgetRemoved();
         isInternalBackingItemsChange = true;
         getBackingItems().setAll(items);
         isInternalBackingItemsChange = false;
@@ -611,7 +481,7 @@ public final class TableFilter<S> {
                 items.set(i, backingItems.get(order[i]));
                 newIndices[order[i]] = i;
             }
-            moveFilteredOutItems(newIndices, items.size());
+            filteredOutItems.move(newIndices, items.size());
         }
 
         BitSet allFilteredOutItems = allFilteredOutItems();
