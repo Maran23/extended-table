@@ -84,7 +84,6 @@
                 <configuration>
                     <failOnError>true</failOnError>
                     <windowtitle>Extended-Table API</windowtitle>
-                    <docfilessubdirs>true</docfilessubdirs>
                 </configuration>
                 <executions>
                     <execution>
@@ -141,8 +140,8 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:github.com/Maran-Tools/extended-table.git</connection>
-        <developerConnection>scm:git:ssh://github.com/Maran-Tools/extended-table.git</developerConnection>
+        <connection>scm:git:https://github.com/Maran-Tools/extended-table.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Maran-Tools/extended-table.git</developerConnection>
         <url>https://github.com/Maran-Tools/extended-table</url>
     </scm>
 
