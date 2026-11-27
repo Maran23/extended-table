@@ -15,10 +15,13 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.layout.Region;
@@ -91,6 +94,24 @@ public enum TableType {
         public void setEditable(Control table, boolean editable) {
             ((ExtendedTableView<?>) table).setEditable(editable);
         }
+
+        @Override
+        public void setFixedColumnCount(Control table, int count) {
+            ((ExtendedTableView<?>) table).setFixedColumnCount(count);
+        }
+
+        @Override
+        public IndexedCell<?> getCell(Control table, int row, TableColumnBase<?, ?> column) {
+            return table.lookupAll(getCellSelector()).stream().map(TableCell.class::cast)
+                    .filter(cell -> cell.getIndex() == row && cell.getTableColumn() == column).findFirst()
+                    .orElseThrow();
+        }
+
+        @Override
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        public void scrollToColumn(Control table, TableColumnBase<?, ?> column) {
+            ((ExtendedTableView) table).scrollToColumn((TableColumn) column);
+        }
     }, TREE_TABLE_VIEW(".tree-table-cell") {
         @Override
         public ItemTable<TreeItem<Object>> createItemTable() {
@@ -145,6 +166,24 @@ public enum TableType {
         public void setEditable(Control table, boolean editable) {
             ((ExtendedTreeTableView<?>) table).setEditable(editable);
         }
+
+        @Override
+        public void setFixedColumnCount(Control table, int count) {
+            ((ExtendedTreeTableView<?>) table).setFixedColumnCount(count);
+        }
+
+        @Override
+        public IndexedCell<?> getCell(Control table, int row, TableColumnBase<?, ?> column) {
+            return table.lookupAll(getCellSelector()).stream().map(TreeTableCell.class::cast)
+                    .filter(cell -> cell.getIndex() == row && cell.getTableColumn() == column).findFirst()
+                    .orElseThrow();
+        }
+
+        @Override
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        public void scrollToColumn(Control table, TableColumnBase<?, ?> column) {
+            ((ExtendedTreeTableView) table).scrollToColumn((TreeTableColumn) column);
+        }
     };
 
     private final String cellSelector;
@@ -180,12 +219,20 @@ public enum TableType {
         return createTable(columns, List.of(new Row("1", "1", "1"), new Row("2", "2", "2")));
     }
 
+    /// Returns the cell of the given row and column inside the table.
+    public abstract IndexedCell<?> getCell(Control table, int row, TableColumnBase<?, ?> column);
+
     /// Returns the CSS selector of the cells inside a table created by [#createTable(List)].
     public String getCellSelector() {
         return cellSelector;
     }
 
+    /// Scrolls horizontally, so that the given column of the table is visible.
+    public abstract void scrollToColumn(Control table, TableColumnBase<?, ?> column);
+
     public abstract void setEditable(Control table, boolean editable);
+
+    public abstract void setFixedColumnCount(Control table, int count);
 
     public record ItemTable<T>(ExtendedTable<T> table, Supplier<T> newItemFactory) { }
 
@@ -282,13 +329,13 @@ public enum TableType {
         }
 
         @Override
-        public void removeVisibleRow(Row row) {
-            tableView.getItems().removeIf(item -> item == row);
+        public void removeColumn(int columnIndex) {
+            tableView.getColumns().remove(columnIndex);
         }
 
         @Override
-        public void removeColumn(int columnIndex) {
-            tableView.getColumns().remove(columnIndex);
+        public void removeVisibleRow(Row row) {
+            tableView.getItems().removeIf(item -> item == row);
         }
 
         @Override
@@ -332,16 +379,16 @@ public enum TableType {
         }
 
         @Override
-        public void sortVisibleRows(Comparator<Row> comparator) {
-            tableView.getItems().sort(comparator);
-        }
-
-        @Override
         public void sortDescendingBy(int columnIndex) {
             TableColumn<Row, ?> column = tableView.getColumns().get(columnIndex);
             column.setSortable(true);
             column.setSortType(TableColumn.SortType.DESCENDING);
             tableView.getSortOrder().setAll(column);
+        }
+
+        @Override
+        public void sortVisibleRows(Comparator<Row> comparator) {
+            tableView.getItems().sort(comparator);
         }
 
         private StringTableColumn<Row> createColumn(String text, Function<Row, String> readFunction,
@@ -450,13 +497,13 @@ public enum TableType {
         }
 
         @Override
-        public void removeVisibleRow(Row row) {
-            treeTableView.getRoot().getChildren().removeIf(item -> item.getValue() == row);
+        public void removeColumn(int columnIndex) {
+            treeTableView.getColumns().remove(columnIndex);
         }
 
         @Override
-        public void removeColumn(int columnIndex) {
-            treeTableView.getColumns().remove(columnIndex);
+        public void removeVisibleRow(Row row) {
+            treeTableView.getRoot().getChildren().removeIf(item -> item.getValue() == row);
         }
 
         @Override
@@ -501,16 +548,16 @@ public enum TableType {
         }
 
         @Override
-        public void sortVisibleRows(Comparator<Row> comparator) {
-            treeTableView.getRoot().getChildren().sort(Comparator.comparing(TreeItem::getValue, comparator));
-        }
-
-        @Override
         public void sortDescendingBy(int columnIndex) {
             TreeTableColumn<Row, ?> column = treeTableView.getColumns().get(columnIndex);
             column.setSortable(true);
             column.setSortType(TreeTableColumn.SortType.DESCENDING);
             treeTableView.getSortOrder().setAll(column);
+        }
+
+        @Override
+        public void sortVisibleRows(Comparator<Row> comparator) {
+            treeTableView.getRoot().getChildren().sort(Comparator.comparing(TreeItem::getValue, comparator));
         }
 
         private StringTreeTableColumn<Row> createColumn(String text, Function<Row, String> readFunction,

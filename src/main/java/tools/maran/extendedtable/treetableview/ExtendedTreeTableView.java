@@ -704,7 +704,7 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         } while (!isDone && --remainingCells > 0);
 
         TreeTableColumn<S, ?> nextColumn = tablePair.getKey();
-        scrollToColumn(getVisibleLeafColumn(getVisibleLeafIndex(nextColumn) - 1));
+        scrollToColumn(nextColumn);
         event.consume();
     }
 

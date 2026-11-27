@@ -1,5 +1,6 @@
 package tools.maran.extendedtable.treetableview;
 
+import java.util.List;
 import java.util.function.ToDoubleFunction;
 
 import javafx.beans.property.BooleanProperty;
@@ -10,7 +11,6 @@ import javafx.collections.MapChangeListener.Change;
 import javafx.collections.ObservableMap;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
-import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.skin.TreeTableViewSkin;
@@ -85,7 +85,7 @@ public class ExtendedTreeTableViewSkin<S> extends TreeTableViewSkin<S> implement
 
     @Override
     public double getHBarValue() {
-        return ((ExtendedVirtualFlow<TreeTableRow<S>>) getVirtualFlow()).getHorizontalBarValue();
+        return getExtendedVirtualFlow().getHorizontalBarValue();
     }
 
     @Override
@@ -93,7 +93,7 @@ public class ExtendedTreeTableViewSkin<S> extends TreeTableViewSkin<S> implement
         // JavaFX will request a layout when the fixed cell size is > 0.
         // We also need this without a fixed cell size set when the fixed column count is > 0.
         if (getSkinnable().getFixedCellSize() <= 0 && getFixedColumnCount() > 0) {
-            ((ExtendedVirtualFlow<TreeTableRow<S>>) getVirtualFlow()).requestCellLayout();
+            getExtendedVirtualFlow().requestCellLayout();
         }
     }
 
@@ -121,53 +121,28 @@ public class ExtendedTreeTableViewSkin<S> extends TreeTableViewSkin<S> implement
 
     @Override
     protected void scrollHorizontally(TreeTableColumn<S, ?> col) {
-        if (col == null || !col.isVisible()) {
+        List<? extends TreeTableColumn<S, ?>> columns = getSkinnable().getVisibleLeafColumns();
+        int index = columns.indexOf(col);
+        int fixedColumnCount = getFixedColumnCount();
+        // Fixed columns are always visible.
+        if (index < fixedColumnCount) {
             return;
         }
 
-        // work out where this column header is, and it's width (start -> end)
+        double fixedWidth = 0;
         double start = 0;
-        double end = 0;
-
-        int fixedColumnCount = getFixedColumnCount();
-        for (TreeTableColumn<S, ?> c : getSkinnable().getVisibleLeafColumns()) {
-            if (c == col) {
-                break;
-            }
-
-            if (fixedColumnCount > 0) {
-                // we do not count fixed columns in as they will always be in front, therefore can be ignored.
-                fixedColumnCount--;
-                end += c.getWidth();
+        for (int i = 0; i < index; i++) {
+            if (i < fixedColumnCount) {
+                fixedWidth += columns.get(i).getWidth();
             } else {
-                start += c.getWidth();
+                start += columns.get(i).getWidth();
             }
         }
-        end = end + start + col.getWidth();
-
-        // determine the visible width of the table
-        double headerWidth = getSkinnable().getWidth();
-
-        // determine by how much we need to translate the table to ensure that the start position of this
-        // column lines up with the left edge of the tableview, and also that the columns don't become detached from the
-        // right edge of the table
-        ScrollBar hBar = getHBar();
-        double pos = hBar.getValue();
-        double max = hBar.getMax();
-
-        double newPos;
-        if (start < pos && start >= 0) {
-            newPos = start;
-        } else {
-            double delta = start < 0 || end > headerWidth ? start - pos : 0;
-            newPos = Math.min(pos + delta, max);
-        }
-
-        hBar.setValue(newPos);
+        getExtendedVirtualFlow().scrollHorizontallyIntoView(start, col.getWidth(), fixedWidth);
     }
 
-    private ScrollBar getHBar() {
-        return ((ExtendedVirtualFlow<TreeTableRow<S>>) getVirtualFlow()).getHorizontalBar();
+    private ExtendedVirtualFlow<TreeTableRow<S>> getExtendedVirtualFlow() {
+        return (ExtendedVirtualFlow<TreeTableRow<S>>) getVirtualFlow();
     }
 
     private void headerVisibilityChanged(boolean isShowHeader) {
@@ -220,5 +195,4 @@ public class ExtendedTreeTableViewSkin<S> extends TreeTableViewSkin<S> implement
     private void updateShowHeaderPseudoClass(boolean showHeader) {
         getSkinnable().pseudoClassStateChanged(PSEUDO_CLASS_SHOW_HEADER, showHeader);
     }
-
 }

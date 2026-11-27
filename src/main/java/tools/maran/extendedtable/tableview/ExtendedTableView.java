@@ -562,7 +562,7 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         } while (!isDone && --remainingCells > 0);
 
         TableColumn<S, ?> nextColumn = tablePair.getKey();
-        scrollToColumn(getVisibleLeafColumn(getVisibleLeafIndex(nextColumn) - 1));
+        scrollToColumn(nextColumn);
         event.consume();
     }
 
