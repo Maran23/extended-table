@@ -49,24 +49,26 @@ import tools.maran.extendedtable.tableview.row.ExtendedTableRow;
 /// The default (empty) items or items set via [#setItems(ObservableList)] are the 'backing' items, which is the
 /// base for filtering. They can be retrieved by [#getBackingItems()] and can be used for further modification.
 /// When items are filtered, the backing items can be restored via [#restoreBackingItems()].
-/// A column can also be filtered in code via [#filter(FilterableColumn, java.util.Collection)] after the items were set,
+/// A column can also be filtered in code via [#filter(FilterableColumn, Collection)] after the items were set,
 /// e.g. to initially only show some items. This is the same as when the user filters the column.
 ///
-/// # Limitation
+/// # Modification
 ///
-/// Since the [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()],
-/// it is not allowed to either add or remove items to it. In fact this will throw an [IllegalStateException].
+/// The [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()].
+/// Items added to or removed from them while filtered are added to or removed from the backing items as well.
+/// Added items are inserted after the item shown before them, or at the start, and are always shown.
 /// When the [items][#getItems()] should be replaced, use [#setItems(ObservableList)].
 /// A bound [#itemsProperty()] is shown as it is and can not be filtered. To keep the items in sync with another list,
 /// bind the content of the [backing items][#getBackingItems()] instead:
 /// `Bindings.bindContent(table.getBackingItems(), items)`.
 /// It is also possible to modify the backing items directly via [#getBackingItems()].
-/// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
-/// That is, added (or replacing) items are always shown, while removed items disappear. Items which are removed and
-/// added within the same change, e.g. via [ObservableList#setAll(java.util.Collection)], are not considered new and
-/// keep their visibility. The table also stays filtered when every backing item is shown again due to such changes.
 ///
-/// Items are tracked by identity, so the same item instance must not be contained multiple times in the backing items.
+/// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
+/// That is, added (or replacing) items are always shown, while removed items disappear.
+/// Items which are removed and added within the same change, e.g. via [ObservableList#setAll(Collection)],
+/// or by the change right after it, as `Bindings.bindContent(..)` does when sorting,
+/// are not considered new and keep their visibility.
+/// The table also stays filtered when every backing item is shown again due to such changes.
 ///
 /// @param <S>
 ///         the source type
@@ -79,7 +81,7 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
     // The items shown by this table, which are never replaced. Items set via setItems(..) are copied into it.
     private final ObservableList<S> items = FXCollections.observableArrayList();
 
-    private final TableFilter<S> tableFilter = new TableFilter<>(this, items::setAll, this::resetValidator);
+    private final TableFilter<S> tableFilter = new TableFilter<>(this, this::getCurrentItems, this::resetValidator);
 
     // The number of columns that should be fixed starting from the first column.
     private IntegerProperty fixedColumnCount;
@@ -475,6 +477,10 @@ public class ExtendedTableView<S> extends TableView<S> implements ExtendedTable<
         }
 
         return new Pair<>(visibleLeafColumns.get(nextColumnIndex), nextRowIndex);
+    }
+
+    private ObservableList<S> getCurrentItems() {
+        return items;
     }
 
     /// Copies the items set via [#setItems(ObservableList)] and shows the own items again. Bound items are shown as

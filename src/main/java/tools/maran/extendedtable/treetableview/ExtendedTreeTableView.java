@@ -60,23 +60,25 @@ import tools.maran.extendedtable.treetableview.row.ExtendedTreeTableRow;
 /// The default (empty) items or items set via [#setItems(ObservableList)] are the 'backing' items, which is the
 /// base for filtering. They can be retrieved by [#getBackingItems()] and can be used for further modification.
 /// When items are filtered, the backing items can be restored via [#restoreBackingItems()].
-/// A column can also be filtered in code via [#filter(FilterableColumn, java.util.Collection)] after the items were set,
+/// A column can also be filtered in code via [#filter(FilterableColumn, Collection)] after the items were set,
 /// e.g. to initially only show some items. This is the same as when the user filters the column.
 ///
-/// # Limitation
+/// # Modification
 ///
-/// Since the [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()],
-/// it is not allowed to either add or remove items to it. In fact this will throw an [IllegalStateException].
+/// The [items][#getItems()] of this table might just be a sub list of the actual [backing items][#getBackingItems()].
+/// Items added to or removed from them while filtered are added to or removed from the backing items as well.
+/// Added items are inserted after the item shown before them, or at the start, and are always shown.
 /// When the [items][#getItems()] should be replaced either use [#setRoot(TreeItem)] or [#setItems(ObservableList)].
 /// To keep the items in sync with another list, bind the content of the [backing items][#getBackingItems()]:
 /// `Bindings.bindContent(table.getBackingItems(), items)`.
 /// It is also possible to modify the backing items directly via [#getBackingItems()].
-/// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
-/// That is, added (or replacing) items are always shown, while removed items disappear. Items which are removed and
-/// added within the same change, e.g. via [ObservableList#setAll(java.util.Collection)], are not considered new and
-/// keep their visibility. The table also stays filtered when every backing item is shown again due to such changes.
 ///
-/// Items are tracked by identity, so the same item instance must not be contained multiple times in the backing items.
+/// A change in the [backing items][#getBackingItems()] is immediately visible, no matter if the table is currently filtered or not.
+/// That is, added (or replacing) items are always shown, while removed items disappear.
+/// Items which are removed and added within the same change, e.g. via [ObservableList#setAll(Collection)],
+/// or by the change right after it, as `Bindings.bindContent(..)` does when sorting,
+/// are not considered new and keep their visibility.
+/// The table also stays filtered when every backing item is shown again due to such changes.
 ///
 /// @param <S>
 ///         the source type
@@ -86,8 +88,7 @@ import tools.maran.extendedtable.treetableview.row.ExtendedTreeTableRow;
 /// @see #getBackingItems()
 public class ExtendedTreeTableView<S> extends TreeTableView<S> implements ExtendedTable<TreeItem<S>> {
 
-    private final TableFilter<TreeItem<S>> tableFilter = new TableFilter<>(this, this::showFilteredItems,
-            this::resetValidator);
+    private final TableFilter<TreeItem<S>> tableFilter = new TableFilter<>(this, this::getCurrentItems, this::resetValidator);
 
     private final ListChangeListener<TreeItem<S>> childrenListener = tableFilter::itemsChanged;
     private final WeakListChangeListener<TreeItem<S>> weakChildrenListener = new WeakListChangeListener<>(
@@ -591,6 +592,10 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
         return new Pair<>(visibleLeafColumns.get(nextColumnIndex), nextRowIndex);
     }
 
+    private ObservableList<TreeItem<S>> getCurrentItems() {
+        return getRoot() == null ? null : getRoot().getChildren();
+    }
+
     private void onCommit(CommitEvent<TreeItem<S>> event) {
         if (tableValidator != null) {
             tableValidator.revalidate(event.getItem());
@@ -651,13 +656,6 @@ public class ExtendedTreeTableView<S> extends TreeTableView<S> implements Extend
     private void setItemsImpl(ObservableList<TreeItem<S>> items) {
         if (!itemsProperty().isBound()) {
             itemsProperty().set(items);
-        }
-    }
-
-    private void showFilteredItems(List<TreeItem<S>> items) {
-        TreeItem<S> root = getRoot();
-        if (root != null) {
-            root.getChildren().setAll(items);
         }
     }
 

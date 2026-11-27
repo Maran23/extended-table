@@ -2,11 +2,14 @@ package tools.maran.extendedtable.filter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +36,13 @@ class TableFilterTest extends JavaFxTest {
     @EnumSource(TableType.class)
     void testSettingTheBackingItemsOrTheItemsKeepsThem(TableType tableType) {
         runOnFxThread(() -> settingTheBackingItemsOrTheItemsKeepsThem(tableType.createItemTable()));
+    }
+
+    @DisplayName("Sorting a list bound to the backing items keeps the filtered out items hidden")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
+    void testSortingAListBoundToTheBackingItemsKeepsTheFilteredOutItemsHidden(TableType tableType) {
+        runOnFxThread(() -> sortingAListBoundToTheBackingItemsKeepsTheFilteredOutItemsHidden(tableType.createItemTable()));
     }
 
     private static <T> void backingItemsAreCreatedFromTheCurrentItems(ItemTable<T> itemTable) {
@@ -66,5 +76,18 @@ class TableFilterTest extends JavaFxTest {
         table.setItems(table.getItems());
         assertEquals(items, table.getItems());
         assertEquals(items, table.getBackingItems());
+    }
+
+    private static <T> void sortingAListBoundToTheBackingItemsKeepsTheFilteredOutItemsHidden(ItemTable<T> itemTable) {
+        ExtendedTable<T> table = itemTable.table();
+        List<T> items = newItems(itemTable.newItemFactory(), 4);
+        ObservableList<T> source = FXCollections.observableArrayList(items);
+        Bindings.bindContent(table.getBackingItems(), source);
+        table.filter(new KeyColumn<>(), List.of(items.get(1), items.get(2)));
+
+        source.sort(Comparator.comparingInt(items::indexOf).reversed());
+
+        assertEquals(List.of(items.get(2), items.get(1)), table.getItems());
+        assertEquals(items.reversed(), table.getBackingItems());
     }
 }

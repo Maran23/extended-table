@@ -55,6 +55,20 @@ class ExtendedTableViewTest extends JavaFxTest {
         });
     }
 
+    @DisplayName("Changing the backing items never changes bound items")
+    @Test
+    void testChangingTheBackingItemsNeverChangesBoundItems() {
+        runOnFxThread(() -> {
+            ExtendedTableView<Row> table = new ExtendedTableView<>();
+            ObservableList<Row> rows = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(rowA));
+            table.itemsProperty().bind(new SimpleObjectProperty<>(rows));
+
+            table.getBackingItems().add(rowB);
+
+            assertEquals(List.of(rowA), rows);
+        });
+    }
+
     @DisplayName("Filtering never modifies or replaces the set items, which may be unmodifiable")
     @Test
     void testFilteringNeverModifiesOrReplacesTheSetItems() {

@@ -206,6 +206,11 @@ public enum TableType {
         }
 
         @Override
+        public void addVisibleRow(int index, Row row) {
+            tableView.getItems().add(index, row);
+        }
+
+        @Override
         public void commitValue(int rowIndex, int columnIndex, String value) {
             TableColumn<Row, String> column = (TableColumn<Row, String>) tableView.getColumns().get(columnIndex);
             TablePosition<Row, String> position = new TablePosition<>(tableView, rowIndex, column);
@@ -250,6 +255,11 @@ public enum TableType {
         }
 
         @Override
+        public boolean isSortedBy(int columnIndex) {
+            return tableView.getSortOrder().contains(tableView.getColumns().get(columnIndex));
+        }
+
+        @Override
         public void moveColumn(int fromIndex, int toIndex) {
             List<TableColumn<Row, ?>> columns = new ArrayList<>(tableView.getColumns());
             columns.add(toIndex, columns.remove(fromIndex));
@@ -262,8 +272,18 @@ public enum TableType {
         }
 
         @Override
+        public void removeBackingRow(int index) {
+            tableView.getBackingItems().remove(index);
+        }
+
+        @Override
         public void removeBackingRow(Row row) {
             tableView.getBackingItems().removeIf(item -> item == row);
+        }
+
+        @Override
+        public void removeVisibleRow(Row row) {
+            tableView.getItems().removeIf(item -> item == row);
         }
 
         @Override
@@ -311,6 +331,19 @@ public enum TableType {
             FXCollections.sort(tableView.getBackingItems(), comparator);
         }
 
+        @Override
+        public void sortVisibleRows(Comparator<Row> comparator) {
+            tableView.getItems().sort(comparator);
+        }
+
+        @Override
+        public void sortDescendingBy(int columnIndex) {
+            TableColumn<Row, ?> column = tableView.getColumns().get(columnIndex);
+            column.setSortable(true);
+            column.setSortType(TableColumn.SortType.DESCENDING);
+            tableView.getSortOrder().setAll(column);
+        }
+
         private StringTableColumn<Row> createColumn(String text, Function<Row, String> readFunction,
                 BiConsumer<Row, String> writeFunction) {
             StringTableColumn<Row> column = new StringTableColumn<>(text);
@@ -334,6 +367,11 @@ public enum TableType {
         @Override
         public void addBackingRow(int index, Row row) {
             treeTableView.getBackingItems().add(index, new TreeItem<>(row));
+        }
+
+        @Override
+        public void addVisibleRow(int index, Row row) {
+            treeTableView.getRoot().getChildren().add(index, new TreeItem<>(row));
         }
 
         @Override
@@ -385,6 +423,11 @@ public enum TableType {
         }
 
         @Override
+        public boolean isSortedBy(int columnIndex) {
+            return treeTableView.getSortOrder().contains(treeTableView.getColumns().get(columnIndex));
+        }
+
+        @Override
         public void moveColumn(int fromIndex, int toIndex) {
             List<TreeTableColumn<Row, ?>> columns = new ArrayList<>(treeTableView.getColumns());
             columns.add(toIndex, columns.remove(fromIndex));
@@ -397,8 +440,18 @@ public enum TableType {
         }
 
         @Override
+        public void removeBackingRow(int index) {
+            treeTableView.getBackingItems().remove(index);
+        }
+
+        @Override
         public void removeBackingRow(Row row) {
             treeTableView.getBackingItems().removeIf(item -> item.getValue() == row);
+        }
+
+        @Override
+        public void removeVisibleRow(Row row) {
+            treeTableView.getRoot().getChildren().removeIf(item -> item.getValue() == row);
         }
 
         @Override
@@ -445,6 +498,19 @@ public enum TableType {
         @Override
         public void sortBackingRows(Comparator<Row> comparator) {
             FXCollections.sort(treeTableView.getBackingItems(), Comparator.comparing(TreeItem::getValue, comparator));
+        }
+
+        @Override
+        public void sortVisibleRows(Comparator<Row> comparator) {
+            treeTableView.getRoot().getChildren().sort(Comparator.comparing(TreeItem::getValue, comparator));
+        }
+
+        @Override
+        public void sortDescendingBy(int columnIndex) {
+            TreeTableColumn<Row, ?> column = treeTableView.getColumns().get(columnIndex);
+            column.setSortable(true);
+            column.setSortType(TreeTableColumn.SortType.DESCENDING);
+            treeTableView.getSortOrder().setAll(column);
         }
 
         private StringTreeTableColumn<Row> createColumn(String text, Function<Row, String> readFunction,

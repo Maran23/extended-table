@@ -1,6 +1,7 @@
 package tools.maran.extendedtable.table.common;
 
 import java.util.Collection;
+import java.util.Comparator;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -57,6 +58,11 @@ public interface ExtendedTable<S> {
     /// @throws IllegalArgumentException
     ///         when a filtered item is not inside the backing items
     void filter(FilterableColumn<S> column, Collection<S> filteredItems);
+
+    /// Returns the comparator the items are sorted by, or null when they are not sorted.
+    ///
+    /// @return the comparator the items are sorted by, may be null
+    Comparator<S> getComparator();
 
     /// Returns the backing items [ObservableList]. The last items set via [#setItems(ObservableList)] are
     /// considered the 'backing' items.

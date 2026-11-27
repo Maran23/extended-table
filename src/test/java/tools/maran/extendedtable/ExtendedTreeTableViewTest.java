@@ -81,6 +81,22 @@ class ExtendedTreeTableViewTest extends JavaFxTest {
         });
     }
 
+    @DisplayName("Changing the backing items while the items are bound changes the children of the root, which are shown")
+    @Test
+    void testChangingTheBackingItemsWhileTheItemsAreBoundChangesTheRootChildren() {
+        runOnFxThread(() -> {
+            ObservableList<TreeItem<Row>> items = FXCollections.unmodifiableObservableList(
+                    FXCollections.observableArrayList(itemA));
+            table.itemsProperty().bind(new SimpleObjectProperty<>(items));
+            TreeItem<Row> itemC = new TreeItem<>(new Row("false", "C", null));
+
+            table.getBackingItems().add(itemC);
+
+            assertEquals(List.of(itemA, itemB, itemC), table.getRoot().getChildren());
+            assertEquals(List.of(itemA), items);
+        });
+    }
+
     @DisplayName("All tree items contain the children of added items and stay complete when filtered")
     @Test
     void testAllTreeItemsContainChildrenAndStayCompleteWhenFiltered() {
